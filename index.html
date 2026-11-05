@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Recorrido 3D del cableado estructurado de una PyME de 30 × 20 m: 40 salidas dobles, 3 access points, rack de 19 pulgadas, charola y canaletas. Elaboró: Luis Diego Cruz López.">
+<title>Cableado Estructurado PyME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: lienzo 3D a pantalla completa con paneles flotantes estilo plano técnico; etiquetas tipo TIA-606 */
+:root{
+  --bg:#e8edf2; --scene:#c7d3de; --panel:#ffffff; --panel-a:rgba(255,255,255,.93); --ink:#132033; --muted:#566377;
+  --line:#d3dae2; --soft:#eef2f6; --accent:#1f5fd1; --on-accent:#ffffff; --route:#d42a6f; --on-route:#ffffff;
+  --ok:#13804f; --scrim:rgba(214,223,232,.55); --shadow:0 8px 28px rgba(19,32,51,.14);
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e131a; --scene:#18212c; --panel:#151c26; --panel-a:rgba(21,28,38,.93); --ink:#e4e9f0; --muted:#97a3b5;
+    --line:#2a3544; --soft:#1d2632; --accent:#6d9fff; --on-accent:#08111f; --route:#ff5c9a; --on-route:#1a0610;
+    --ok:#45c48a; --scrim:rgba(10,14,20,.55); --shadow:0 8px 28px rgba(0,0,0,.45); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e131a; --scene:#18212c; --panel:#151c26; --panel-a:rgba(21,28,38,.93); --ink:#e4e9f0; --muted:#97a3b5;
+  --line:#2a3544; --soft:#1d2632; --accent:#6d9fff; --on-accent:#08111f; --route:#ff5c9a; --on-route:#1a0610;
+  --ok:#45c48a; --scrim:rgba(10,14,20,.55); --shadow:0 8px 28px rgba(0,0,0,.45); color-scheme:dark;
+}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);overflow:hidden;-webkit-font-smoothing:antialiased}
+#app{position:relative;width:100%;height:100%;overflow:hidden}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;cursor:grab;touch-action:none}
+#scene:active{cursor:grabbing}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.lbl{position:absolute;left:0;top:0;white-space:nowrap;font:600 12px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:var(--panel-a);border:1px solid var(--line);padding:4px 7px 3px;border-radius:3px;will-change:transform}
+.lbl.room{font-size:14px;padding:5px 9px 4px;border-left:3px solid var(--accent)}
+.lbl.door{font-size:11px;border-left:3px solid var(--accent)}
+.lbl.rk{font-size:11px;padding:3px 6px 2px}
+.lbl.node{font:500 11px/1 var(--f-mono);letter-spacing:0;text-transform:none;padding:3px 5px}
+.lbl.sel{background:var(--route);color:var(--on-route);border-color:transparent}
+.card{background:var(--panel-a);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.tl{position:absolute;top:16px;left:16px;width:min(318px,calc(100% - 32px));display:flex;flex-direction:column;gap:8px;z-index:3;pointer-events:none}
+.tl>*{pointer-events:auto}
+.brand{padding:12px 14px}
+.eyebrow{margin:0;font:600 11px/1.25 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.brand h1{margin:3px 0 0;font:700 28px/1 var(--f-display);letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;margin:7px 0 0;font:500 11.5px/1.3 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px}
+.modes button{font:600 13px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:10px 6px 9px;border:0;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer}
+.modes button:hover{color:var(--ink)}
+.modes button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.info{padding:12px 14px}
+.info header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.info h2{margin:0;font:700 19px/1.1 var(--f-display);letter-spacing:.03em;text-transform:uppercase;text-wrap:balance}
+.info .sub{margin:3px 0 0;color:var(--muted);font-size:12.5px}
+.info dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:10px 0 0;font-size:12.5px}
+.info dt{color:var(--muted)}
+.info dd{margin:0;font-family:var(--f-mono);font-size:12px;min-width:0;overflow-wrap:anywhere}
+.info .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.x{border:0;background:transparent;color:var(--muted);width:30px;height:30px;border-radius:4px;cursor:pointer;font:400 20px/1 var(--f-body);flex:none}
+.x:hover{background:var(--soft);color:var(--ink)}
+.btn{font:600 12.5px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:9px 12px 8px;border-radius:4px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{position:absolute;top:16px;right:16px;bottom:16px;width:356px;display:flex;flex-direction:column;overflow:hidden;z-index:3}
+.panel.collapsed{bottom:auto}
+.panel.collapsed .pane{display:none}
+.tabs{display:flex;align-items:stretch;border-bottom:1px solid var(--line);flex:none}
+.tabs [role="tab"]{flex:1;font:600 12.5px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:13px 4px 10px;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer}
+.tabs [role="tab"][aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs .x{align-self:center;margin:0 6px}
+.pane{flex:1;min-height:0;overflow:auto;padding:12px 14px 16px}
+.pane h3{font:600 12px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.pane h3:first-child{margin-top:2px}
+.pane p{margin:0 0 10px;font-size:13px;max-width:65ch}
+.pane .note{font-size:12px;color:var(--muted)}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.sum div{background:var(--soft);border-radius:4px;padding:8px 8px 7px;min-width:0}
+.sum b{display:block;font:600 19px/1.05 var(--f-mono);font-variant-numeric:tabular-nums}
+.sum span{display:block;margin-top:3px;font-size:11px;line-height:1.25;color:var(--muted)}
+.row-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 6px;min-height:30px}
+.row-tools p{margin:0;font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+th{font:600 11px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);position:sticky;top:-12px;background:var(--panel);z-index:1}
+td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
+.nodes tbody tr{cursor:pointer}
+.nodes tbody tr:hover{background:var(--soft)}
+.nodes tbody tr[aria-selected="true"]{background:var(--soft);box-shadow:inset 3px 0 0 var(--route)}
+.nodes tr.grp td{font:600 11px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--soft);cursor:default}
+.mono{font-family:var(--f-mono)}
+.num{text-align:right}
+.nid{font:500 12px/1 var(--f-mono)}
+.vl{display:inline-block;font:500 11px/1 var(--f-mono);padding:3px 5px 3px 4px;border-left:3px solid var(--c);background:var(--soft);border-radius:2px}
+.len{font-family:var(--f-mono)}
+.bar{display:block;height:3px;background:var(--line);border-radius:2px;margin:3px 0 0 auto;width:44px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.layers label{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line)}
+.layers input{width:16px;height:16px;accent-color:var(--accent);margin:0;flex:none}
+.legend{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:12.5px}
+.legend li{display:flex;align-items:center;gap:10px}
+.sw{width:28px;height:6px;border-radius:3px;background:var(--c);flex:none;box-shadow:0 0 0 1px var(--line)}
+.mat td{font-size:12px}
+.mat td:nth-child(2),.mat td:nth-child(3),.mat th:nth-child(2),.mat th:nth-child(3){text-align:right;font-family:var(--f-mono);white-space:nowrap}
+.mat th:nth-child(2),.mat th:nth-child(3){font-family:var(--f-display)}
+.mat td small{display:block;color:var(--muted);font-size:11px;font-family:var(--f-body);white-space:normal}
+.mat td.chg{color:var(--accent);font-weight:600}
+.mat tr.sec td{font:600 11px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--soft)}
+.crit{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:13px}
+.crit li{display:grid;grid-template-columns:20px 1fr;gap:6px;align-items:start}
+.crit b{color:var(--ok);font-family:var(--f-mono)}
+.crit span{min-width:0}
+.crit small{display:block;color:var(--muted);font-size:12px}
+.chain{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:12px 0 0;font:500 11.5px/1 var(--f-mono)}
+.chain span{padding:5px 7px;background:var(--soft);border:1px solid var(--line);border-radius:3px}
+.chain i{font-style:normal;color:var(--muted)}
+.tour{position:absolute;left:16px;right:388px;bottom:16px;margin-inline:auto;max-width:640px;padding:14px 16px 14px;z-index:3}
+#app.pc .tour{right:16px}
+.tour-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.step{font:500 12px/1 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.dots button{width:18px;height:6px;border:0;border-radius:3px;background:var(--line);padding:0;cursor:pointer}
+.dots button[aria-current="step"]{background:var(--accent)}
+.tour h2{margin:8px 0 4px;font:700 23px/1.1 var(--f-display);text-transform:uppercase;letter-spacing:.02em;text-wrap:balance}
+.tour p{margin:0;font-size:13.5px;max-width:70ch}
+.tour-ctrl{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.tour-ctrl .grow{flex:1}
+.bl{position:absolute;left:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;z-index:2}
+.hint{padding:8px 12px;font-size:12px;color:var(--muted);max-width:360px;line-height:1.7}
+.hint kbd{font:500 11px/1 var(--f-mono);padding:2px 5px;border:1px solid var(--line);border-radius:3px;background:var(--soft);color:var(--ink)}
+.minimap{width:236px;height:164px;display:block;cursor:crosshair}
+.joy{position:absolute;left:24px;bottom:24px;width:124px;height:124px;border-radius:50%;z-index:3;touch-action:none}
+.joy .knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:var(--accent);opacity:.9}
+.intro{position:absolute;inset:0;display:grid;place-items:center;padding:16px;background:var(--scrim);z-index:5}
+.intro .card{width:min(580px,100%);padding:24px 24px 20px;max-height:100%;overflow:auto}
+.intro h2{margin:4px 0 8px;font:700 40px/.95 var(--f-display);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+.intro p{margin:0;font-size:14px;max-width:62ch}
+.intro .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.intro .acts .btn{padding:12px 14px 11px;font-size:13.5px}
+.intro small{display:block;margin-top:14px;color:var(--muted);font-size:12px}
+.panel-toggle{display:none}
+@media (max-width:760px){
+  .tl{width:calc(100% - 32px - 84px)}
+  .brand{padding:9px 12px}
+  .brand .eyebrow,.brand .meta{display:none}
+  .brand h1{font-size:21px;margin:0}
+  .modes button{font-size:12px;padding:9px 4px 8px;letter-spacing:.05em}
+  .panel-toggle{display:block;position:absolute;top:16px;right:16px;z-index:4}
+  .panel{top:auto;left:0;right:0;bottom:0;width:auto;height:min(66%,560px);border-radius:12px 12px 0 0;transform:translateY(105%);transition:transform .25s ease;padding-bottom:env(safe-area-inset-bottom,0px);z-index:6;visibility:hidden}
+  .panel.open{transform:none;visibility:visible}
+  .panel.collapsed{bottom:0}
+  .panel.collapsed .pane{display:block}
+  .tour{right:16px;padding:12px 14px}
+  .tour h2{font-size:19px}
+  .tour p{font-size:13px}
+  .tour-ctrl{gap:6px}
+  .tour-ctrl .btn{padding:9px 9px 8px;letter-spacing:.05em}
+  .bl{left:auto;right:16px;align-items:flex-end}
+  .hint{display:none}
+  .minimap{width:150px;height:106px}
+  .intro h2{font-size:31px}
+}
+@media (prefers-reduced-motion: reduce){ .panel{transition:none} }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="scene" tabindex="0" aria-label="Modelo 3D del edificio comercial de la PyME con su cableado estructurado"></canvas>
+  <div id="labels" aria-hidden="true"></div>
+
+  <div class="tl">
+    <header class="brand card">
+      <p class="eyebrow">Cableado estructurado · PyME</p>
+      <h1>Edificio comercial</h1>
+      <p class="meta"><span>1 planta</span><span>30 × 20 m</span><span>40 salidas dobles</span><span>UTP Cat 6</span></p>
+    </header>
+    <nav class="modes card" aria-label="Modo de vista">
+      <button type="button" data-mode="tour" aria-pressed="false">Guiado</button>
+      <button type="button" data-mode="walk" aria-pressed="false">Caminar</button>
+      <button type="button" data-mode="orbit" aria-pressed="false">Vista general</button>
+    </nav>
+    <section id="info" class="info card" hidden aria-live="polite">
+      <header>
+        <div><h2 id="infoTitle"></h2><p class="sub" id="infoSub"></p></div>
+        <button type="button" class="x" id="infoClose" aria-label="Cerrar detalles">×</button>
+      </header>
+      <dl id="infoRows"></dl>
+      <div class="acts" id="infoActs"></div>
+    </section>
+  </div>
+
+  <button type="button" id="panelToggle" class="panel-toggle btn">Panel</button>
+  <aside id="panel" class="panel card" aria-label="Panel del proyecto">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-nodos" aria-controls="pane-nodos" aria-selected="true">Salidas</button>
+      <button type="button" role="tab" id="tab-capas" aria-controls="pane-capas" aria-selected="false">Capas</button>
+      <button type="button" role="tab" id="tab-mat" aria-controls="pane-mat" aria-selected="false">Material</button>
+      <button type="button" role="tab" id="tab-acerca" aria-controls="pane-acerca" aria-selected="false">Proyecto</button>
+      <button type="button" class="x" id="panelMin" aria-label="Contraer panel">–</button>
+    </div>
+    <div class="pane" id="pane-nodos" role="tabpanel" aria-labelledby="tab-nodos">
+      <div class="sum">
+        <div><b id="sNodes">80</b><span>RJ45 en 40 salidas dobles + 3 AP</span></div>
+        <div><b id="sCable">—</b><span>m de UTP Cat 6 (modelo)</span></div>
+        <div><b id="sMax">—</b><span>m, enlace más largo (máx. 90)</span></div>
+      </div>
+      <div class="row-tools"><p>Toca una salida para ver su ruta completa.</p><button type="button" class="btn ghost" id="clearSel" hidden>Quitar ruta</button></div>
+      <table class="nodes">
+        <thead><tr><th>Salida</th><th>Equipo</th><th>Jacks</th><th>VLAN</th><th class="num">Enlace</th></tr></thead>
+        <tbody id="nodeRows"></tbody>
+      </table>
+      <p class="note" style="margin-top:10px">Enlace = trayectoria medida en el modelo, del patch panel al faceplate, más 3 m de reserva en el cuarto de telecomunicaciones. Jack 1: datos. Jack 2: voz o reserva.</p>
+    </div>
+    <div class="pane" id="pane-capas" role="tabpanel" aria-labelledby="tab-capas" hidden>
+      <h3>Mostrar</h3>
+      <div class="layers">
+        <label><input type="checkbox" id="lyCeiling"> Techo y luminarias</label>
+        <label><input type="checkbox" id="lyCut"> Muros recortados a 1.20 m</label>
+        <label><input type="checkbox" id="lyXray"> Canaletas transparentes (ver cables)</label>
+        <label><input type="checkbox" id="lyFurn" checked> Escritorios y equipos</label>
+        <label><input type="checkbox" id="lyPath" checked> Charola y canaletas</label>
+        <label><input type="checkbox" id="lyCable" checked> Cableado UTP y patch cords</label>
+        <label><input type="checkbox" id="lyFiber" checked> Fibra óptica del proveedor</label>
+        <label><input type="checkbox" id="lyLabels" checked> Etiquetas</label>
+        <label><input type="checkbox" id="lyExt" checked> Exterior y calle</label>
+      </div>
+      <h3>Simbología</h3>
+      <ul class="legend" id="legend"></ul>
+    </div>
+    <div class="pane" id="pane-mat" role="tabpanel" aria-labelledby="tab-mat" hidden>
+      <h3>Lista de materiales</h3>
+      <p class="note">“Tu lista” viene de tu hoja. “Modelo” se mide sobre las trayectorias del 3D. En azul, lo que conviene ajustar.</p>
+      <table class="mat"><thead><tr><th>Concepto</th><th>Tu lista</th><th>Modelo</th></tr></thead><tbody id="matRows"></tbody></table>
+    </div>
+    <div class="pane" id="pane-acerca" role="tabpanel" aria-labelledby="tab-acerca" hidden>
+      <h3>Problema</h3>
+      <p>Red para una PyME en un edificio comercial de una planta de 30 × 20 m con tres áreas: recepción y sala de reuniones, área operativa con 30 trabajadores, y servidores y administración con 5 puestos. Cada salida de trabajo lleva 2 RJ45, con cuarto de telecomunicaciones a 90 m como máximo, canalización principal con 40 % de holgura mínima y patch panels de 24 o 48 puertos.</p>
+      <p><b>Elaboró:</b> Luis Diego Cruz López · Ingeniería en Tecnologías de la Información y Comunicaciones</p>
+      <h3>Cumplimiento</h3>
+      <ul class="crit" id="crit"></ul>
+      <h3>Distribución</h3>
+      <p><b>Área 1:</b> recepción (2 PC, AP-1) y sala de reuniones (3 PC).<br><b>Área 2:</b> operativa, 30 PC en 10 filas de 3, AP-2.<br><b>Área 3:</b> telecomunicaciones/servidores (rack 19") y administración (5 PC, AP-3).</p>
+      <h3>Canalización</h3>
+      <p>Charola principal de 200 × 50 mm a 2.70 m que recorre los 30 m del edificio. Bajadas y canaleta perimetral de 100 × 50 mm al pie de los muros, que salta por encima de las puertas. Canaleta de piso de cada muro al escritorio, que sube por la pata hasta una caja con faceplate doble.</p>
+      <h3>Ruta de la señal</h3>
+      <div class="chain"><span>ISP</span><i>→</i><span>ONT</span><i>→</i><span>Firewall</span><i>→</i><span>Switch</span><i>→</i><span>Patch panel</span><i>→</i><span>Salida</span><i>→</i><span>PC</span></div>
+      <h3>Normas de referencia</h3>
+      <p>ANSI/TIA-568.2-D · cableado Cat 6<br>ANSI/TIA-569-E · trayectorias y espacios<br>ANSI/TIA-606-C · etiquetado<br>ANSI/TIA-607-D · puesta a tierra</p>
+      <h3>Supuestos del modelo</h3>
+      <p class="note">Altura de muros 3.0 m sin plafón. Acometida del proveedor por la fachada norte. VLAN por área como propuesta: 10 operativa, 20 administración, 30 recepción y sala, 40 Wi-Fi.</p>
+    </div>
+  </aside>
+
+  <section id="tour" class="tour card" hidden aria-live="polite">
+    <div class="tour-head"><span class="step" id="tourStep">01 / 11</span><div class="dots" id="tourDots"></div></div>
+    <h2 id="tourTitle"></h2>
+    <p id="tourText"></p>
+    <div class="tour-ctrl">
+      <button type="button" class="btn" id="tPrev">Anterior</button>
+      <button type="button" class="btn" id="tPlay">Reproducir</button>
+      <span class="grow"></span>
+      <button type="button" class="btn primary" id="tNext">Siguiente</button>
+    </div>
+  </section>
+
+  <div class="bl">
+    <div id="hint" class="hint card" hidden>Arrastra para mirar · <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> o flechas para caminar · <kbd>Shift</kbd> corre · clic en un equipo para ver sus datos · clic en el plano para moverte</div>
+    <canvas id="minimap" class="minimap card" hidden aria-label="Plano del edificio. Toca para moverte."></canvas>
+  </div>
+  <div id="joy" class="joy card" hidden aria-hidden="true"><div class="knob"></div></div>
+
+  <div id="intro" class="intro">
+    <div class="card">
+      <p class="eyebrow">Recorrido 3D · red de datos de una PyME</p>
+      <h2>Cableado estructurado del edificio comercial</h2>
+      <p id="introText">Una planta de 30 × 20 m con 40 salidas dobles, 3 access points y un rack de 19". Entra y sigue la conexión desde el proveedor hasta cada computadora.</p>
+      <div class="chain"><span>ISP</span><i>→</i><span>Rack</span><i>→</i><span>Charola</span><i>→</i><span>Canaleta</span><i>→</i><span>Salida doble</span><i>→</i><span>PC</span></div>
+      <div class="acts">
+        <button type="button" class="btn primary" data-start="tour">Iniciar recorrido guiado</button>
+        <button type="button" class="btn" data-start="walk">Caminar libremente</button>
+        <button type="button" class="btn" data-start="orbit">Ver todo el edificio</button>
+      </div>
+      <small>Funciona con mouse, teclado o pantalla táctil.</small>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const app = $('#app'), canvas = $('#scene'), labelRoot = $('#labels');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+const narrow = () => matchMedia('(max-width: 760px)').matches;
+function fail(msg) { $('#introText').textContent = msg; document.querySelectorAll('[data-start]').forEach((b) => (b.hidden = true)); }
+if (!window.THREE) { fail('No se pudo cargar el motor 3D. Revisa tu conexión a internet y recarga la página.'); return; }
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) { fail('Tu navegador no tiene WebGL activo. Abre el enlace en Chrome, Edge o Firefox actualizados.'); return; }
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xc7d3de);
+const camera = new THREE.PerspectiveCamera(62, 1, 0.04, 500);
+camera.rotation.order = 'YXZ';
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb0b8c2, 0.88));
+const sun = new THREE.DirectionalLight(0xffffff, 0.3); sun.position.set(-18, 40, 26); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xe2eaff, 0.16); fill.position.set(30, 18, -22); scene.add(fill);
+
+// ---------- Constantes ----------
+const BW = 30, BD = 20, H = 3.0, TE = 0.25, TI = 0.15, YT = 2.7, CZ = 4.3, CUT = 1.2, RESERVE = 3;
+const U = 0.04445, U0 = 0.12;
+const RK = { x0: 24.0, x1: 25.0, zc: 4.85, front: 24.06 };
+const UPV = new THREE.Vector3(0, 1, 0);
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const lam = (c, o) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o || {}));
+const COL = { cable: 0x2b62c9, fiber: 0xe3a50b, route: 0xe0337a, ground: 0x2e9d4f, uplink: 0xe8ecf1, wan: 0x6b7480, conduit: 0x9aa3ad };
+const VLAN = {
+  10: { name: 'Operativa', color: 0x1f9e5a },
+  20: { name: 'Administración', color: 0xe0782a },
+  30: { name: 'Recepción y sala', color: 0x8a55d8 },
+  40: { name: 'Wi-Fi', color: 0xb9c1cc },
+};
+const AREA = { OPE: 'Área operativa', ADM: 'Administración', REC: 'Recepción', SAL: 'Sala de reuniones', AP: 'Access point' };
+const AREA_SHORT = { OPE: 'Operativa', ADM: 'Admin.', REC: 'Recepción', SAL: 'Sala', AP: 'Techo' };
+const hex = (c) => '#' + c.toString(16).padStart(6, '0');
+const fmt = (v) => v.toFixed(1);
+const pad2 = (n) => String(n).padStart(2, '0');
+const FONT_D = '"Barlow Condensed", "Arial Narrow", Arial, sans-serif';
+const FONT_M = '"IBM Plex Mono", Menlo, Consolas, monospace';
+const uC = (u, n) => U0 + (u - 1) * U + (n || 1) * U / 2;
+const uB = (u) => U0 + (u - 1) * U;
+const PPU = (p) => 0.17 + (p - 0.5) * (0.66 / 24);
+const portZ = (u) => RK.zc - 0.2415 + u * 0.483;
+const H1 = U - 0.004, H2 = 2 * U - 0.004;
+const Yd = { shelf: uB(42), rtr: uC(41), o40: uC(40), ppa: uC(38, 2), o37: uC(37), sw1: uC(36), sw2: uC(35), o34: uC(34), ppb: uC(32, 2), poe: uC(31), o30: uC(30), ppc: uC(28, 2) };
+Yd.ont = Yd.shelf + 0.006 + 0.02;
+const ppRowY = (base, row) => base + (row ? -0.22 : 0.22) * H2;
+const swRowY = (base, row) => base + (row ? -0.18 : 0.18) * H1;
+const FRONT = RK.front - 0.005;
+
+const G = {};
+['walls', 'ceiling', 'floor', 'furn', 'rack', 'path', 'cable', 'fiber', 'ext', 'route'].forEach((k) => { G[k] = new THREE.Group(); scene.add(G[k]); });
+const wallPieces = [], occluders = [], colliders = [], pickables = [];
+const pick = (obj, info) => { obj.userData.info = info; pickables.push(obj); return obj; };
+function box(w, h, d, mat, x, y, z, parent) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); (parent || scene).add(m); return m; }
+function cyl(r, h, mat, x, y, z, parent, axis, r2) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r2 == null ? r : r2, r, h, 14), mat);
+  if (axis === 'x') m.rotation.z = Math.PI / 2;
+  if (axis === 'z') m.rotation.x = Math.PI / 2;
+  m.position.set(x, y, z); (parent || scene).add(m); return m;
+}
+function canvasTex(w, h, draw, repeat) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
+  return t;
+}
+function polyLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += pts[i].distanceTo(pts[i - 1]); return L; }
+function polyTube(pts, r, seg) {
+  seg = seg || 6;
+  const pos = [], nor = [], idx = [];
+  const d = V3(), u = V3(), w = V3(), a = V3(), b = V3(), n = V3(), XV = V3(1, 0, 0);
+  let base = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    d.subVectors(pts[i + 1], pts[i]); const L = d.length(); if (L < 1e-5) continue; d.divideScalar(L);
+    u.crossVectors(d, Math.abs(d.y) > 0.95 ? XV : UPV).normalize(); w.crossVectors(d, u).normalize();
+    a.copy(pts[i]).addScaledVector(d, -r * 0.9); b.copy(pts[i + 1]).addScaledVector(d, r * 0.9);
+    for (let e = 0; e < 2; e++) {
+      const c = e ? b : a;
+      for (let k = 0; k < seg; k++) {
+        const ang = (k / seg) * Math.PI * 2;
+        n.copy(u).multiplyScalar(Math.cos(ang)).addScaledVector(w, Math.sin(ang));
+        pos.push(c.x + n.x * r, c.y + n.y * r, c.z + n.z * r); nor.push(n.x, n.y, n.z);
+      }
+    }
+    for (let k = 0; k < seg; k++) { const k1 = (k + 1) % seg, i0 = base + k, i1 = base + k1, j0 = base + seg + k, j1 = base + seg + k1; idx.push(i0, i1, j0, i1, j1, j0); }
+    base += seg * 2;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setIndex(idx); g.computeBoundingSphere();
+  return g;
+}
+function curvePts(ctrl, n) { return new THREE.CatmullRomCurve3(ctrl).getPoints(n || 16); }
+function tube(pts, r, color, parent, info) {
+  const m = new THREE.Mesh(polyTube(pts, r, 6), lam(color, { side: THREE.DoubleSide }));
+  (parent || G.cable).add(m); if (info) pick(m, info); return m;
+}
+class Poly {
+  constructor(p) { this.p = p; this.c = [0]; for (let i = 1; i < p.length; i++) this.c.push(this.c[i - 1] + p[i].distanceTo(p[i - 1])); this.len = this.c[this.c.length - 1]; }
+  at(d, out) {
+    d = Math.max(0, Math.min(this.len, d)); let i = 1;
+    while (i < this.c.length - 1 && this.c[i] < d) i++;
+    const s = this.c[i] - this.c[i - 1], t = s > 0 ? (d - this.c[i - 1]) / s : 0;
+    return out.lerpVectors(this.p[i - 1], this.p[i], t);
+  }
+}
+
+// ---------- Datos del edificio (según plano del usuario) ----------
+const ROOMS = [
+  { id: 'REC', name: 'Recepción', short: 'REC', x0: 0, x1: 10, z0: 0, z1: 10 },
+  { id: 'SAL', name: 'Sala de reuniones', short: 'SALA', x0: 0, x1: 10, z0: 10, z1: 20 },
+  { id: 'OPE', name: 'Área operativa', short: 'OPERATIVA', x0: 10, x1: 20, z0: 0, z1: 20 },
+  { id: 'TEL', name: 'Telecomunicaciones / Servidores', short: 'TELECOM', x0: 20, x1: 30, z0: 0, z1: 9.3 },
+  { id: 'ADM', name: 'Administración', short: 'ADMIN', x0: 20, x1: 30, z0: 9.3, z1: 20 },
+];
+const ROWZ = (r) => 2.9 + r * (14.7 / 9);
+const OPX = [12.0, 14.8, 17.5];
+const OUT = [];
+for (let n = 1; n <= 30; n++) { const r = Math.floor((n - 1) / 3), c = (n - 1) % 3; OUT.push({ id: 'OPE-' + pad2(n), area: 'OPE', name: 'PC' + n, x: OPX[c], z: ROWZ(r), face: 'N', corner: c < 2 ? 'W' : 'E', feed: c < 2 ? 'OW' : 'OE' }); }
+[[22.7, 12.4, 'W'], [26.1, 12.4, 'E'], [22.7, 14.1, 'W'], [26.1, 14.1, 'E'], [23.1, 15.8, 'W']].forEach(([x, z, cn], i) => OUT.push({ id: 'ADM-' + (i + 1), area: 'ADM', name: 'PC' + (i + 1), x, z, face: 'N', corner: cn, feed: cn === 'W' ? 'AW' : 'AE' }));
+OUT.push({ id: 'REC-1', area: 'REC', name: 'PC1', x: 3.25, z: 3.0, face: 'S', corner: 'W', feed: 'REC' });
+OUT.push({ id: 'REC-2', area: 'REC', name: 'PC2', x: 6.4, z: 3.0, face: 'S', corner: 'W', feed: 'REC' });
+OUT.push({ id: 'SAL-1', area: 'SAL', name: 'PC1', x: 3.35, z: 13.0, face: 'N', corner: 'W', feed: 'S1n' });
+OUT.push({ id: 'SAL-2', area: 'SAL', name: 'PC2', x: 6.5, z: 13.0, face: 'N', corner: 'W', feed: 'S1n' });
+OUT.push({ id: 'SAL-3', area: 'SAL', name: 'PC3', x: 3.6, z: 17.0, face: 'S', corner: 'W', feed: 'S1s' });
+[[5.9, 9.55, 'Recepción', Math.PI, 'APW'], [19.55, 8.2, 'Área operativa', -Math.PI / 2, 'OE'], [29.5, 10.85, 'Administración', -Math.PI / 2, 'AE']].forEach(([x, z, room, rot, feed], i) => OUT.push({ id: 'AP-' + (i + 1), area: 'AP', name: 'AP-' + (i + 1), room, x, z, rot, feed }));
+const outById = {};
+const DW = 1.4, DD = 0.7;
+
+let M, INFO;
+const stats = { tray: 0, canal: 0, piso: 0, rise: 0, sleeves: 0, hangers: 0, elbows: 0 };
+
+function processOutlets() {
+  const kGroup = {};
+  OUT.forEach((o, i) => {
+    o.idx = i; outById[o.id] = o;
+    o.vlan = o.area === 'OPE' ? 10 : o.area === 'ADM' ? 20 : o.area === 'AP' ? 40 : 30;
+    if (o.area === 'AP') {
+      const j = i - 40; o.cab = [80 + j];
+      o.pp = [{ panel: 'C', port: j + 1 }]; o.sw = [{ name: 'SW-PoE', port: j + 1 }];
+      const ga = o.feed === 'APW' ? 'A1' : o.feed; kGroup[ga] = kGroup[ga] || 0; o.k = [kGroup[ga]++];
+    } else {
+      o.cab = [2 * i, 2 * i + 1];
+      o.pp = o.cab.map((g) => (g < 48 ? { panel: 'A', port: g + 1 } : { panel: 'B', port: g - 47 }));
+      o.sw = o.pp.map((p) => ({ name: p.panel === 'A' ? 'SW-01' : 'SW-02', port: p.port }));
+      const grp = o.feed === 'REC' || o.feed === 'S1n' || o.feed === 'S1s' ? 'A1' : o.feed;
+      kGroup[grp] = kGroup[grp] || 0; o.k = [kGroup[grp]++, kGroup[grp]++];
+    }
+    o.tags = o.pp.map((p) => p.panel + pad2(p.port));
+    for (const p of o.pp) {
+      const col = (p.port - 1) % 24, row = Math.floor((p.port - 1) / 24);
+      p.z = portZ(PPU(col + 1)); p.col = col; p.row = row;
+      p.y = ppRowY(p.panel === 'A' ? Yd.ppa : p.panel === 'B' ? Yd.ppb : Yd.ppc, row);
+    }
+  });
+}
+
+// ---------- Materiales y texturas ----------
+function buildMaterials() {
+  const floorTex = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#cfd3d8'; g.fillRect(0, 0, w, h); g.fillStyle = '#c7ccd2'; g.fillRect(0, 0, w / 2, h / 2); g.fillRect(w / 2, h / 2, w / 2, h / 2);
+    g.strokeStyle = '#b4bac1'; g.lineWidth = 2;
+    for (const p of [1, w / 2]) { g.beginPath(); g.moveTo(p, 0); g.lineTo(p, h); g.stroke(); g.beginPath(); g.moveTo(0, p); g.lineTo(w, p); g.stroke(); }
+  }, [BW / 1.2, BD / 1.2]);
+  const siteTex = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#6d7680'; g.fillRect(0, 0, w, h); g.fillStyle = '#656e78'; g.fillRect(0, 0, w / 2, h / 2); g.fillRect(w / 2, h / 2, w / 2, h / 2);
+    g.strokeStyle = '#555d66'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2);
+  }, [10 / 1.2, 9.3 / 1.2]);
+  const meshTex = canvasTex(64, 64, (g, w, h) => { g.clearRect(0, 0, w, h); g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, 6); g.fillRect(0, 0, 6, h); });
+  const screenTex = canvasTex(256, 150, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#1b4a86'); gr.addColorStop(1, '#2f80c6');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,.88)'; g.fillRect(28, 22, 122, 76); g.fillStyle = '#2b62c9'; g.fillRect(28, 22, 122, 12);
+    g.fillStyle = '#c9d6e6'; for (let i = 0; i < 4; i++) g.fillRect(36, 44 + i * 12, 90 - i * 14, 5);
+    g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(162, 40, 70, 50);
+    g.fillStyle = '#0d1a2b'; g.fillRect(0, h - 16, w, 16);
+  });
+  M = {
+    wall: lam(0xe3e6ea), glass: lam(0xa9cbe0, { transparent: true, opacity: 0.28, depthWrite: false }),
+    door: lam(0x9a7650), gdoor: lam(0x9fc3dc, { transparent: true, opacity: 0.4 }), floor: lam(0xffffff, { map: floorTex }), site: lam(0xffffff, { map: siteTex }),
+    ceil: lam(0xeef0f2), lightP: new THREE.MeshBasicMaterial({ color: 0xf5f8fc }),
+    desk: lam(0xc4a47e), leg: lam(0x59616d), chair: lam(0x2d3540), monitor: lam(0x1c2026), tower: lam(0x2b3038), key: lam(0x3a4049),
+    screen: new THREE.MeshBasicMaterial({ map: screenTex }), led: new THREE.MeshBasicMaterial({ color: 0x5ad1ff }),
+    canal: lam(0xf4f5f6, { transparent: true, opacity: 1 }), piso: lam(0xb9bfc6, { transparent: true, opacity: 1 }),
+    plate: lam(0xfbfbfb), jack: lam(0x2b62c9), jack2: lam(0xe6e8eb), sbox: lam(0xe8eaed),
+    tray: lam(0xa9b1ba, { map: meshTex, alphaTest: 0.5, side: THREE.DoubleSide }), trayWire: lam(0xa9b1ba),
+    rod: lam(0x6f7782), sleeve: lam(0x5c6470), fire: lam(0xc8342b), conduit: lam(COL.conduit),
+    rack: lam(0x1d2026), rack2: lam(0x2b3037), rail: lam(0x8a929c),
+    ap: lam(0xf3f4f6), white: lam(0xf0f2f4), copper: lam(0xb8733d), black: lam(0x1a1c20), steel: lam(0xb7bec6),
+    grass: lam(0x9aac86), concrete: lam(0xc9c7c1), asphalt: lam(0x4d5158), stripe: lam(0xe9e4c8), pole: lam(0x9a958c),
+    trunk: lam(0x6e5640), leaf: lam(0x5f8a55), wood2: lam(0x8c6b4c), sofa: lam(0x4b5d73),
+  };
+  M.meshTex = meshTex;
+  INFO = {
+    tray: () => ({ t: 'Charola principal tipo malla', s: 'Canalización principal · 30 m', rows: [['Medida', '200 × 50 mm, acero galvanizado'], ['Altura', '2.70 m sobre piso terminado'], ['Recorrido', 'De muro oeste a muro este, sobre el rack'], ['Ocupación', fmt(occTray) + ' % con 83 cables (holgura ' + fmt(100 - occTray) + ' %)'], ['Soporte', 'Varilla roscada con trapecio cada 1.5 m']] }),
+    canal: () => ({ t: 'Canaleta perimetral', s: 'Canalización secundaria', rows: [['Medida', '100 × 50 mm, PVC con división'], ['Altura', 'Al pie del muro; sube y pasa sobre las puertas'], ['Más cargada', 'Operativa oeste: 40 cables, ' + fmt(occCanal) + ' %']] }),
+    drop: { t: 'Bajada de canaleta', s: 'De la charola al muro', rows: [['Medida', '100 × 50 mm, PVC'], ['Tramo', 'De 2.70 m al piso']] },
+    piso: { t: 'Canaleta de piso', s: 'Del muro al escritorio', rows: [['Medida', '60 × 13 mm, perfil bajo con rampa'], ['Lleva', 'Hasta 4 cables UTP Cat 6']] },
+    rise: { t: 'Subida al escritorio', s: 'Canaleta de 40 × 25 mm', rows: [['Tramo', 'Del piso a la cubierta, por la pata trasera']] },
+    sleeve: { t: 'Pasamuros', s: 'Penetración de muro', rows: [['Tipo', 'Ducto con sello cortafuego'], ['Norma', 'TIA-569: sellar toda penetración']] },
+    rack: { t: 'Rack 19" de 42U', s: 'Cuarto de telecomunicaciones / servidores', rows: [['Medida', '800 × 1000 mm, 2.0 m de alto'], ['Libre', '4 m al frente, 5 m atrás'], ['Organizadores', 'Verticales en ambos lados']] },
+    shelf: { t: 'Bandeja para rack', s: 'U42', rows: [['Soporta', 'ONT/módem del proveedor']] },
+    ont: { t: 'ONT del proveedor', s: 'Sobre la bandeja, U42', rows: [['Entrada', 'Fibra óptica del ISP'], ['Salida', 'Ethernet al firewall (WAN)']] },
+    rtr: { t: 'Firewall / router · FW-01', s: 'Rack U41', rows: [['WAN', 'ONT del proveedor'], ['LAN', 'Troncales a SW-01, SW-02 y SW-PoE'], ['Función', 'NAT, DHCP, ruteo entre VLAN y seguridad']] },
+    sw1: { t: 'Switch Gigabit 48 puertos · SW-01', s: 'Rack U36', rows: [['Conecta', 'Patch panel A (48 puertos)'], ['Áreas', 'Operativa PC1 a PC24'], ['Troncal', 'SFP al firewall']] },
+    sw2: { t: 'Switch Gigabit 48 puertos · SW-02', s: 'Rack U35', rows: [['Conecta', 'Patch panel B (32 de 48 usados)'], ['Áreas', 'Operativa PC25–30, administración, recepción y sala'], ['Troncal', 'SFP al firewall']] },
+    poe: { t: 'Switch PoE · SW-PoE', s: 'Rack U31', rows: [['Puertos', '8 × Gigabit PoE+'], ['Alimenta', 'AP-1, AP-2 y AP-3 por el mismo cable']] },
+    ppa: { t: 'Patch panel A · 48 puertos Cat 6', s: 'Rack U38–39', rows: [['Usados', '48 de 48'], ['Salidas', 'Operativa PC1 a PC24 (2 jacks cada una)']] },
+    ppb: { t: 'Patch panel B · 48 puertos Cat 6', s: 'Rack U32–33', rows: [['Usados', '32 de 48'], ['Salidas', 'Operativa PC25–30, administración, recepción y sala']] },
+    ppc: { t: 'Patch panel C · 48 puertos Cat 6', s: 'Rack U28–29', rows: [['Usados', '3 de 48 (access points)'], ['Libres', '45 puertos: holgura para crecer']] },
+    org: { t: 'Organizador horizontal 1U', s: 'Rack', rows: [['Función', 'Ordena los patch cords entre panel y switch']] },
+    ups: { t: 'UPS 1500 VA', s: 'Rack U1–2', rows: [['Respaldo', 'Switches, firewall y ONT']] },
+    pdu: { t: 'PDU / regleta para rack', s: 'Rack U4', rows: [['Contactos', '8 × NEMA 5-15']] },
+    fiber: { t: 'Acometida de fibra óptica', s: 'Fachada norte · TIA-569', rows: [['Cable', 'Drop monomodo del ISP'], ['Recorrido', 'Poste → fachada norte → tubo por techo → rack']] },
+    conduit: { t: 'Tubo conduit 3/4"', s: 'Por el techo', rows: [['Lleva', 'Fibra óptica del ISP hasta el rack']] },
+    pole: { t: 'Poste del proveedor (ISP)', s: 'Calle norte', rows: [['Caja', 'NAP de distribución'], ['Servicio', 'Internet por fibra']] },
+    tmgb: { t: 'Sistema de puesta a tierra', s: 'Barra TMGB · TIA-607', rows: [['Conexión', 'Cable verde 6 AWG al rack']] },
+    split: { t: 'Minisplit', s: 'Clima del cuarto de servidores', rows: [['Temperatura', '18 °C a 24 °C']] },
+  };
+}
+let occTray = 0, occCanal = 0;
+
+// ---------- Exterior ----------
+function buildExterior() {
+  const g = G.ext;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(170, 170), M.grass); ground.rotation.x = -Math.PI / 2; ground.position.set(15, -0.01, 10); g.add(ground);
+  box(46, 0.03, 3.0, M.concrete, 13, 0.005, -1.65, g);
+  box(3.0, 0.03, 26, M.concrete, -1.65, 0.005, 9.5, g);
+  box(70, 0.02, 8, M.asphalt, 15, 0.0, -7.3, g);
+  for (let x = -18; x < 48; x += 4) box(2, 0.022, 0.12, M.stripe, x, 0.003, -7.3, g);
+  for (const [x, z] of [[-5, 22], [34, 22], [34, 8], [12, 24], [-5, 14]]) { cyl(0.14, 2.2, M.trunk, x, 1.1, z, g); const c = new THREE.Mesh(new THREE.SphereGeometry(1.35, 14, 10), M.leaf); c.position.set(x, 3.0, z); g.add(c); }
+  const pg = new THREE.Group(); g.add(pg);
+  cyl(0.13, 8.6, M.pole, 24.3, 4.3, -3.4, pg, null, 0.1);
+  box(0.1, 0.1, 1.8, M.pole, 24.3, 8.0, -3.4, pg);
+  box(0.32, 0.42, 0.16, M.steel, 24.3, 6.85, -3.24, pg);
+  pick(pg, INFO.pole);
+}
+
+// ---------- Piso, techo y muros ----------
+function buildShell() {
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(BW, BD), M.floor); floor.rotation.x = -Math.PI / 2; floor.position.set(BW / 2, 0.001, BD / 2); G.floor.add(floor);
+  const sf = new THREE.Mesh(new THREE.PlaneGeometry(10, 9.3), M.site); sf.rotation.x = -Math.PI / 2; sf.position.set(25, 0.003, 4.65); G.floor.add(sf);
+  box(BW + TE, 0.12, BD + TE, M.ceil, BW / 2, H + 0.06, BD / 2, G.ceiling);
+  const lit = (x, z) => box(0.6, 0.012, 0.6, M.lightP, x, H - 0.006, z, G.ceiling);
+  for (const r of ROOMS) {
+    const w = r.x1 - r.x0, d = r.z1 - r.z0, nx = Math.max(1, Math.round(w / 2.8)), nz = Math.max(1, Math.round(d / 2.8));
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { const x = r.x0 + (i + 0.5) * (w / nx), z = r.z0 + (j + 0.5) * (d / nz); if (Math.abs(z - CZ) > 0.5) lit(x, z); }
+  }
+}
+function addPiece(axis, fixed, a, b, y0, y1, t, mat, opts) {
+  opts = opts || {};
+  const len = b - a, h = y1 - y0; if (len <= 0.001 || h <= 0.001) return null;
+  const geo = axis === 'x' ? new THREE.BoxGeometry(len, h, t) : new THREE.BoxGeometry(t, h, len);
+  const m = new THREE.Mesh(geo, mat), c = (a + b) / 2;
+  if (axis === 'x') m.position.set(c, y0 + h / 2, fixed); else m.position.set(fixed, y0 + h / 2, c);
+  G.walls.add(m); wallPieces.push({ m, y0, y1 });
+  if (!opts.noOcc) occluders.push(m);
+  if (opts.collide !== false && y0 < 1.2) {
+    const hx = axis === 'x' ? len / 2 : t / 2, hz = axis === 'x' ? t / 2 : len / 2;
+    colliders.push({ x0: m.position.x - hx, x1: m.position.x + hx, z0: m.position.z - hz, z1: m.position.z + hz });
+  }
+  return m;
+}
+function wall(axis, fixed, a0, a1, t, openings) {
+  openings = (openings || []).slice().sort((p, q) => p[0] - q[0]);
+  let cur = a0;
+  for (const o of openings) {
+    const [o0, o1, type, bot, top, swing] = o;
+    addPiece(axis, fixed, cur, o0, 0, H, t, M.wall);
+    if (bot > 0) addPiece(axis, fixed, o0, o1, 0, bot, t, M.wall);
+    addPiece(axis, fixed, o0, o1, top, H, t, M.wall, { collide: false });
+    if (type === 'win') addPiece(axis, fixed, o0, o1, bot, top, 0.02, M.glass, { collide: false, noOcc: true });
+    if (type === 'door' || type === 'gdoor') {
+      const w = o1 - o0, hh = top - 0.02, geo = axis === 'x' ? new THREE.BoxGeometry(0.04, hh, w) : new THREE.BoxGeometry(w, hh, 0.04);
+      const leaf = new THREE.Mesh(geo, type === 'gdoor' ? M.gdoor : M.door);
+      if (axis === 'x') leaf.position.set(o0 + 0.03, hh / 2, fixed + swing * (t / 2 + w / 2));
+      else leaf.position.set(fixed + swing * (t / 2 + w / 2), hh / 2, o0 + 0.03);
+      G.walls.add(leaf); wallPieces.push({ m: leaf, y0: 0, y1: hh });
+    }
+    cur = o1;
+  }
+  addPiece(axis, fixed, cur, a1, 0, H, t, M.wall);
+}
+function buildWalls() {
+  const win = (a, b, bot, top) => [a, b, 'win', bot == null ? 1.0 : bot, top == null ? 2.3 : top];
+  const door = (a, b, s, top, type) => [a, b, type || 'door', 0, top || 2.1, s];
+  wall('x', 0, -TE / 2, BW + TE / 2, TE, [win(1.0, 2.2), win(7.6, 9.2), win(11.5, 13.5), win(16.0, 18.0)]);
+  wall('x', BD, -TE / 2, BW + TE / 2, TE, [win(5.6, 7.6), win(11.0, 13.0), win(14.0, 16.0), win(17.0, 19.0), win(21.5, 23.5), win(26.0, 28.0)]);
+  wall('z', 0, TE / 2, BD - TE / 2, TE, [win(1.4, 3.2), door(5.1, 6.3, 1, 2.4, 'gdoor'), win(12.4, 14.4), win(16.0, 18.0)]);
+  wall('z', BW, TE / 2, BD - TE / 2, TE, [win(12.4, 14.0), win(16.2, 18.2)]);
+  wall('z', 10, TE / 2, BD - TE / 2, TI, [door(4.5, 5.5, -1)]);
+  wall('z', 20, TE / 2, BD - TE / 2, TI, [door(4.6, 5.5, 1), door(9.45, 10.35, 1)]);
+  wall('x', 10, TE / 2, 10 - TI / 2, TI, [door(8.0, 9.2, -1)]);
+  wall('x', 9.3, 20 + TI / 2, BW - TE / 2, TI);
+}
+
+// ---------- Mobiliario ----------
+function chairAt(g, x, z) {
+  box(0.46, 0.06, 0.46, M.chair, x, 0.46, z, g);
+  box(0.44, 0.42, 0.05, M.chair, x, 0.76, z + 0.21, g);
+  cyl(0.025, 0.36, M.leg, x, 0.25, z, g);
+  cyl(0.28, 0.03, M.leg, x, 0.05, z, g);
+}
+function deskAt(g, w, d) {
+  box(w, 0.03, d, M.desk, 0, 0.735, 0, g);
+  box(0.03, 0.72, d - 0.04, M.leg, -w / 2 + 0.03, 0.36, 0, g);
+  box(0.03, 0.72, d - 0.04, M.leg, w / 2 - 0.03, 0.36, 0, g);
+  box(w - 0.06, 0.3, 0.02, M.leg, 0, 0.55, -d / 2 + 0.04, g);
+}
+function pcAt(g, mx, tx, d) {
+  const bz = -d / 2;
+  box(0.56, 0.34, 0.03, M.monitor, mx, 1.04, bz + 0.2, g);
+  const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.3), M.screen); sc.position.set(mx, 1.04, bz + 0.216); g.add(sc);
+  box(0.06, 0.14, 0.04, M.monitor, mx, 0.82, bz + 0.17, g);
+  box(0.22, 0.012, 0.16, M.monitor, mx, 0.756, bz + 0.19, g);
+  box(0.42, 0.02, 0.14, M.key, mx, 0.76, bz + 0.45, g);
+  box(0.06, 0.02, 0.1, M.key, mx + 0.32, 0.76, bz + 0.46, g);
+  box(0.18, 0.38, 0.4, M.tower, tx, 0.94, bz + 0.27, g);
+  box(0.12, 0.01, 0.002, M.led, tx, 1.08, bz + 0.471, g);
+}
+function buildStaticFurniture() {
+  const g = G.furn;
+  box(5.4, 1.1, 0.06, M.wood2, 4.8, 0.55, 3.82, g); box(5.5, 0.03, 0.4, M.desk, 4.8, 1.115, 3.85, g);
+  colliders.push({ x0: 2.05, x1: 7.55, z0: 3.75, z1: 4.05 });
+  box(2.2, 0.42, 0.75, M.sofa, 2.3, 0.21, 8.9, g); box(2.2, 0.45, 0.15, M.sofa, 2.3, 0.6, 9.2, g);
+  colliders.push({ x0: 1.2, x1: 3.4, z0: 8.5, z1: 9.3 });
+  cyl(0.6, 0.04, M.desk, 7.8, 0.74, 16.6, g); cyl(0.05, 0.72, M.leg, 7.8, 0.36, 16.6, g);
+  for (const [dx, dz, r] of [[0, -0.95, Math.PI], [0, 0.95, 0], [-0.95, 0, -Math.PI / 2], [0.95, 0, Math.PI / 2]]) { const c = new THREE.Group(); chairAt(c, 0, 0); c.position.set(7.8 + dx, 0, 16.6 + dz); c.rotation.y = r; g.add(c); }
+  colliders.push({ x0: 7.2, x1: 8.4, z0: 16.0, z1: 17.2 });
+  box(0.5, 1.3, 1.6, M.steel, 29.55, 0.65, 18.6, g); colliders.push({ x0: 29.3, x1: 29.8, z0: 17.8, z1: 19.4 });
+  const split = box(0.22, 0.3, 0.95, M.white, 29.75, 2.45, 6.8, G.rack); pick(split, INFO.split);
+  const bar = box(0.36, 0.05, 0.03, M.copper, 25.6, 2.25, 0.16, G.rack); pick(bar, INFO.tmgb);
+  cyl(0.08, 0.5, lam(0xc8342b), 20.4, 0.4, 8.8, G.rack);
+}
+
+// ---------- Rack ----------
+function ears(g, w, h, col) {
+  g.fillStyle = col || '#2b3038'; g.fillRect(0, 0, 34, h); g.fillRect(w - 34, 0, 34, h);
+  g.fillStyle = '#9aa3ad'; for (const x of [17, w - 17]) { g.beginPath(); g.arc(x, h / 2, 6, 0, 7); g.fill(); }
+}
+function rackDevice(u, n, depth, draw, info, body) {
+  const h = n * U - 0.004, y = uC(u, n);
+  const tex = canvasTex(1024, Math.round((1024 * h) / 0.483), draw);
+  const side = lam(body || 0x202329), front = new THREE.MeshBasicMaterial({ map: tex });
+  const m = new THREE.Mesh(new THREE.BoxGeometry(depth, h, 0.483), [side, front, side, side, side, side]);
+  m.position.set(RK.front + depth / 2, y, RK.zc); G.rack.add(m); pick(m, info); occluders.push(m); return m;
+}
+function drawPP48(name, used) {
+  return (g, w, h) => {
+    g.fillStyle = '#17191d'; g.fillRect(0, 0, w, h); ears(g, w, h);
+    g.fillStyle = '#e8ecf1'; g.font = '600 38px ' + FONT_D; g.textBaseline = 'middle'; g.fillText(name, 46, h / 2);
+    g.textAlign = 'center'; g.font = '500 13px ' + FONT_M;
+    for (let p = 1; p <= 48; p++) {
+      const col = (p - 1) % 24, row = Math.floor((p - 1) / 24), cx = PPU(col + 1) * w, cy = row ? h * 0.72 : h * 0.28;
+      g.fillStyle = '#c4cbd3'; g.fillText(String(p), cx, row ? h * 0.93 : h * 0.08);
+      g.fillStyle = p <= used ? '#050607' : '#22262c'; g.fillRect(cx - 9, cy - h * 0.1, 18, h * 0.2);
+    }
+  };
+}
+function drawSW(name, sub, used, n) {
+  return (g, w, h) => {
+    g.fillStyle = '#2a2e35'; g.fillRect(0, 0, w, h); ears(g, w, h, '#353a42');
+    g.fillStyle = '#e8ecf1'; g.font = '600 25px ' + FONT_D; g.textBaseline = 'middle'; g.fillText(name, 44, h * 0.34);
+    g.font = '500 12px ' + FONT_M; g.fillStyle = '#aab3be'; g.fillText(sub, 44, h * 0.72);
+    for (let p = 1; p <= n; p++) {
+      const col = n > 8 ? (p - 1) % 24 : p - 1, row = n > 8 ? Math.floor((p - 1) / 24) : -1, cx = PPU(col + 1) * w, cy = row < 0 ? h * 0.5 : row ? h * 0.68 : h * 0.32;
+      g.fillStyle = '#0b0c0e'; g.fillRect(cx - 9, cy - 10, 18, 20);
+      g.fillStyle = p <= used ? '#3ddc84' : '#3b4048'; g.fillRect(cx + 4, row === 1 ? cy + 11 : cy - 14, 5, 3);
+    }
+    if (n > 8) for (let k = 0; k < 4; k++) { g.fillStyle = k === 0 ? '#2f6fd6' : '#0b0c0e'; g.fillRect(w * 0.87 + k * 22, h * 0.3, 16, h * 0.4); }
+  };
+}
+function buildRack() {
+  const g = G.rack, zc = RK.zc;
+  const frame = new THREE.Group(); g.add(frame);
+  for (const [x, z] of [[24.02, zc - 0.38], [24.02, zc + 0.38], [24.98, zc - 0.38], [24.98, zc + 0.38]]) box(0.04, 2.02, 0.04, M.rack, x, 1.01, z, frame);
+  box(1.0, 0.04, 0.8, M.rack, 24.5, 2.0, zc, frame);
+  box(1.0, 0.1, 0.8, M.rack, 24.5, 0.05, zc, frame);
+  for (const z of [zc - 0.345, zc + 0.345]) box(0.13, 1.86, 0.1, M.rack2, 24.065, 1.05, z, frame);
+  for (const z of [zc - 0.25, zc + 0.25]) { box(0.018, 1.88, 0.018, M.rail, 24.05, 1.06, z, frame); box(0.018, 1.88, 0.018, M.rail, 24.94, 1.06, z, frame); }
+  box(0.98, 1.9, 0.02, lam(0x23272d, { transparent: true, opacity: 0.5 }), 24.5, 1.05, zc + 0.39, frame);
+  pick(frame, INFO.rack);
+  colliders.push({ x0: 23.98, x1: 25.02, z0: zc - 0.42, z1: zc + 0.42 });
+  // bandeja + ONT
+  box(0.4, 0.006, 0.44, M.rack2, RK.front + 0.2, Yd.shelf + 0.003, zc, g); pick(box(0.006, 0.03, 0.44, M.rack2, RK.front + 0.003, Yd.shelf + 0.015, zc, g), INFO.shelf);
+  const ontTex = canvasTex(256, 48, (g2, w, h) => {
+    g2.fillStyle = '#f2f3f5'; g2.fillRect(0, 0, w, h); g2.font = '600 13px ' + FONT_M; g2.textBaseline = 'middle';
+    [['PWR', '#3ddc84'], ['PON', '#3ddc84'], ['LOS', '#3a3f47'], ['LAN', '#3ddc84']].forEach(([t, c], i) => { g2.fillStyle = c; g2.beginPath(); g2.arc(24 + i * 44, 16, 4, 0, 7); g2.fill(); g2.fillStyle = '#5a6370'; g2.fillText(t, 12 + i * 44, 34); });
+  });
+  const os = lam(0xf2f3f5);
+  const ont = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.22), [os, new THREE.MeshBasicMaterial({ map: ontTex }), os, os, os, os]);
+  ont.position.set(RK.front + 0.1, Yd.ont, zc - 0.06); g.add(ont); pick(ont, INFO.ont);
+  rackDevice(41, 1, 0.25, (g2, w, h) => {
+    g2.fillStyle = '#262a31'; g2.fillRect(0, 0, w, h); ears(g2, w, h, '#353a42');
+    g2.fillStyle = '#e8ecf1'; g2.font = '600 30px ' + FONT_D; g2.textBaseline = 'middle'; g2.fillText('FW-01 · FIREWALL / ROUTER', 46, h / 2 + 2);
+    [0.62, 0.70, 0.74, 0.78, 0.82].forEach((u, i) => { const cx = u * w; g2.fillStyle = '#0b0c0e'; g2.fillRect(cx - 9, h * 0.32, 18, h * 0.42); g2.fillStyle = i === 0 ? '#f0b429' : i < 4 ? '#3ddc84' : '#3b4048'; g2.fillRect(cx - 9, h * 0.2, 6, 4); });
+    g2.fillStyle = '#aab3be'; g2.font = '500 12px ' + FONT_M; g2.textAlign = 'center'; g2.fillText('WAN', 0.62 * w, h * 0.88); g2.fillText('LAN', 0.76 * w, h * 0.88);
+  }, INFO.rtr, 0x262a31);
+  const org = (u) => rackDevice(u, 1, 0.08, (g2, w, h) => {
+    g2.fillStyle = '#101215'; g2.fillRect(0, 0, w, h); ears(g2, w, h);
+    g2.strokeStyle = '#3a3f47'; g2.lineWidth = 7; for (let k = 0; k < 5; k++) { const cx = (0.16 + k * 0.17) * w; g2.beginPath(); g2.moveTo(cx - 30, h * 0.2); g2.lineTo(cx - 30, h * 0.8); g2.lineTo(cx + 30, h * 0.8); g2.lineTo(cx + 30, h * 0.2); g2.stroke(); }
+  }, INFO.org);
+  [40, 37, 34, 30].forEach(org);
+  rackDevice(38, 2, 0.12, drawPP48('PP-A', 48), INFO.ppa);
+  rackDevice(36, 1, 0.3, drawSW('SW-01', '48×GbE', 48, 48), INFO.sw1, 0x2a2e35);
+  rackDevice(35, 1, 0.3, drawSW('SW-02', '48×GbE', 32, 48), INFO.sw2, 0x2a2e35);
+  rackDevice(32, 2, 0.12, drawPP48('PP-B', 32), INFO.ppb);
+  rackDevice(31, 1, 0.25, drawSW('SW-PoE', '8×PoE+', 3, 8), INFO.poe, 0x2a2e35);
+  rackDevice(28, 2, 0.12, drawPP48('PP-C', 3), INFO.ppc);
+  rackDevice(4, 1, 0.06, (g2, w, h) => {
+    g2.fillStyle = '#16181b'; g2.fillRect(0, 0, w, h); ears(g2, w, h);
+    g2.fillStyle = '#e8ecf1'; g2.font = '600 28px ' + FONT_D; g2.textBaseline = 'middle'; g2.fillText('PDU', 46, h / 2 + 2);
+    for (let k = 0; k < 8; k++) { const cx = (0.2 + k * 0.085) * w; g2.fillStyle = '#2b2f35'; g2.fillRect(cx - 18, h * 0.22, 36, h * 0.56); g2.fillStyle = '#0a0b0c'; g2.fillRect(cx - 8, h * 0.32, 4, h * 0.2); g2.fillRect(cx + 4, h * 0.32, 4, h * 0.2); }
+  }, INFO.pdu);
+  rackDevice(1, 2, 0.5, (g2, w, h) => {
+    g2.fillStyle = '#1b1d21'; g2.fillRect(0, 0, w, h); ears(g2, w, h);
+    g2.fillStyle = '#e8ecf1'; g2.font = '600 34px ' + FONT_D; g2.textBaseline = 'middle'; g2.fillText('UPS 1500 VA', 46, h / 2);
+    g2.fillStyle = '#7fd0c0'; g2.fillRect(w * 0.62, h * 0.28, w * 0.16, h * 0.44);
+    g2.fillStyle = '#123a33'; g2.font = '600 22px ' + FONT_M; g2.fillText('100%', w * 0.645, h / 2);
+  }, INFO.ups);
+}
+
+// ---------- Canalización ----------
+function trayRun(x0, x1, z, y) {
+  const L = x1 - x0, c = (x0 + x1) / 2, W = 0.2, Hs = 0.05, g = new THREE.Group();
+  const mk = (rx, ry) => { const t = M.meshTex.clone(); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); const m = M.tray.clone(); m.map = t; return m; };
+  const bottom = new THREE.Mesh(new THREE.PlaneGeometry(L, W), mk(L / 0.1, 2)); bottom.rotation.x = -Math.PI / 2; bottom.position.set(c, y, z); g.add(bottom);
+  for (const s of [-1, 1]) {
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(L, Hs), mk(L / 0.1, 0.5)); side.position.set(c, y + Hs / 2, z + (s * W) / 2); g.add(side);
+    box(L, 0.006, 0.006, M.trayWire, c, y + Hs, z + (s * W) / 2, g);
+  }
+  G.path.add(g); pick(g, INFO.tray); stats.tray += L;
+}
+function hanger(x, z) {
+  for (const dz of [-0.13, 0.13]) cyl(0.005, H - YT, M.rod, x, YT + (H - YT) / 2, z + dz, G.path);
+  box(0.03, 0.02, 0.3, M.rod, x, YT - 0.012, z, G.path); stats.hangers++;
+}
+function sleeveRect(x, y, z, axis, w, h, info) {
+  const g = new THREE.Group(), L = TI + 0.1;
+  if (axis === 'x') { box(L, 0.02, w, M.sleeve, x, y - h / 2, z, g); box(L, 0.02, w, M.sleeve, x, y + h / 2, z, g); box(L, h, 0.02, M.sleeve, x, y, z - w / 2, g); box(L, h, 0.02, M.sleeve, x, y, z + w / 2, g); box(0.02, h + 0.04, w + 0.04, lam(0xc8342b, { transparent: true, opacity: 0.4 }), x - L / 2, y, z, g); }
+  else { box(w, 0.02, L, M.sleeve, x, y - h / 2, z, g); box(w, 0.02, L, M.sleeve, x, y + h / 2, z, g); box(0.02, h, L, M.sleeve, x - w / 2, y, z, g); box(0.02, h, L, M.sleeve, x + w / 2, y, z, g); box(w + 0.04, h + 0.04, 0.02, lam(0xc8342b, { transparent: true, opacity: 0.4 }), x, y, z - L / 2, g); }
+  G.path.add(g); pick(g, info || INFO.sleeve); stats.sleeves++;
+}
+// Canaleta perimetral: polilíneas pegadas al muro. w = 'z' (muro a lo largo de z, x fija) o 'x'.
+const WALL_RUNS = [
+  { w: 'z', drop: true, pts: [[0.15, 2.7, CZ], [0.15, 0.05, CZ]] },
+  { w: 'z', pts: [[0.15, 0.05, CZ], [0.15, 0.05, 0.15]] },
+  { w: 'x', pts: [[0.15, 0.05, 0.15], [5.75, 0.05, 0.15]] },
+  { w: 'z', pts: [[0.15, 2.5, CZ], [0.15, 2.5, 6.45], [0.15, 0.05, 6.45], [0.15, 0.05, 19.85]] },
+  { w: 'x', pts: [[0.15, 0.05, 10.1], [5.95, 0.05, 10.1]] },
+  { w: 'x', pts: [[0.15, 0.05, 9.9], [5.75, 0.05, 9.9]] },
+  { w: 'x', pts: [[0.15, 0.05, 19.85], [3.05, 0.05, 19.85]] },
+  { w: 'z', drop: true, pts: [[10.1, 2.7, CZ], [10.1, 0.05, CZ]] },
+  { w: 'z', pts: [[10.1, 0.05, CZ], [10.1, 0.05, 2.45]] },
+  { w: 'z', pts: [[10.1, 2.3, CZ], [10.1, 2.3, 5.6], [10.1, 0.05, 5.6], [10.1, 0.05, 17.3]] },
+  { w: 'z', drop: true, pts: [[19.9, 2.7, CZ], [19.9, 0.05, CZ]] },
+  { w: 'z', pts: [[19.9, 0.05, CZ], [19.9, 0.05, 2.45]] },
+  { w: 'z', pts: [[19.9, 2.3, CZ], [19.9, 2.3, 5.6], [19.9, 0.05, 5.6], [19.9, 0.05, 9.35], [19.9, 2.3, 9.35], [19.9, 2.3, 10.45], [19.9, 0.05, 10.45], [19.9, 0.05, 17.3]] },
+  { w: 'z', pts: [[20.1, 2.6, CZ], [20.1, 2.6, 10.55], [20.1, 0.05, 10.55], [20.1, 0.05, 15.5]] },
+  { w: 'z', drop: true, pts: [[29.85, 2.7, CZ], [29.85, 0.05, CZ], [29.85, 0.05, 13.8]] },
+];
+function canalSeg(a, b, w, info) {
+  const d = V3().subVectors(b, a), L = d.length(); if (L < 1e-3) return;
+  const c = V3().addVectors(a, b).multiplyScalar(0.5);
+  let sx, sy, sz;
+  if (Math.abs(d.y) > 1e-3) { sy = L + 0.05; if (w === 'z') { sx = 0.05; sz = 0.1; } else { sx = 0.1; sz = 0.05; } }
+  else if (Math.abs(d.x) > 1e-3) { sx = L + 0.1; sy = 0.1; sz = 0.05; }
+  else { sz = L + 0.1; sy = 0.1; sx = 0.05; }
+  const m = box(sx, sy, sz, M.canal, c.x, c.y, c.z, G.path); pick(m, info); stats.canal += L;
+}
+const raceRows = {};
+function pisoSeg(a, b) {
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 1e-3) return;
+  const cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2;
+  const m = Math.abs(b[0] - a[0]) > Math.abs(b[1] - a[1]) ? box(L + 0.06, 0.013, 0.06, M.piso, cx, 0.0065, cz, G.path) : box(0.06, 0.013, L + 0.06, M.piso, cx, 0.0065, cz, G.path);
+  pick(m, INFO.piso); stats.piso += L;
+}
+function buildPathways() {
+  trayRun(0.35, 29.65, CZ, YT);
+  for (let x = 1.0; x < 29.4; x += 1.5) if (Math.abs(x - 10) > 0.35 && Math.abs(x - 20) > 0.35) hanger(x, CZ);
+  sleeveRect(10, YT + 0.03, CZ, 'x', 0.24, 0.1); sleeveRect(20, YT + 0.03, CZ, 'x', 0.24, 0.1);
+  sleeveRect(20.1, 2.6, 9.3, 'z', 0.08, 0.13); sleeveRect(0.15, 0.06, 10, 'z', 0.08, 0.13); sleeveRect(29.85, 0.06, 9.3, 'z', 0.08, 0.13);
+  for (const run of WALL_RUNS) {
+    const P = run.pts.map((p) => V3(p[0], p[1], p[2]));
+    for (let i = 0; i < P.length - 1; i++) canalSeg(P[i], P[i + 1], run.w, run.drop && i === 0 ? INFO.drop : INFO.canal);
+    stats.elbows += Math.max(0, P.length - 2);
+  }
+  stats.elbows += 6;
+}
+
+// ---------- Escritorios, salidas y AP ----------
+function placeOutlets() {
+  for (const o of OUT) {
+    const info = outletInfo(o);
+    if (o.area === 'AP') {
+      const rot = o.rot, g = new THREE.Group(); g.position.set(o.x, 0, o.z); g.rotation.y = rot;
+      const W = (x, y, z) => V3(x, y, z).applyAxisAngle(UPV, rot).add(g.position);
+      box(0.7, 0.03, 0.5, M.desk, 0, 0.735, 0, g);
+      for (const [lx, lz] of [[-0.32, -0.22], [0.32, -0.22], [-0.32, 0.22], [0.32, 0.22]]) box(0.03, 0.72, 0.03, M.leg, lx, 0.36, lz, g);
+      box(0.24, 0.045, 0.17, M.ap, -0.1, 0.7725, 0, g);
+      for (const ax of [-0.2, -0.14, -0.06, 0.0]) cyl(0.006, 0.17, M.black, ax, 0.88, -0.075, g);
+      box(0.12, 0.004, 0.002, new THREE.MeshBasicMaterial({ color: 0x3ddc84 }), -0.1, 0.78, 0.086, g);
+      G.furn.add(g); pick(g, info);
+      const og = new THREE.Group(); og.position.copy(g.position); og.rotation.y = rot;
+      box(0.08, 0.075, 0.06, M.sbox, 0.25, 0.7875, -0.2, og);
+      box(0.07, 0.07, 0.006, M.plate, 0.25, 0.7875, -0.167, og);
+      box(0.016, 0.016, 0.006, M.jack, 0.25, 0.785, -0.162, og);
+      const rise = box(0.04, 0.76, 0.025, M.canal, 0.27, 0.38, -0.27, og); stats.rise += 0.76;
+      G.path.add(og); pick(og, info); pick(rise, INFO.rise);
+      o.riseB = W(0.27, 0.007, -0.27); o.jacks = [W(0.25, 0.785, -0.16)]; o.fp = W(0.25, 0.79, -0.16);
+      o.toUser = V3(0, 0, 1).applyAxisAngle(UPV, rot); o.lx = V3(1, 0, 0).applyAxisAngle(UPV, rot);
+      const apIn = W(0.02, 0.775, -0.06), jk = o.jacks[0], mid = jk.clone().lerp(apIn, 0.5); mid.y = 0.765;
+      o.cord = curvePts([jk, jk.clone().addScaledVector(o.toUser, 0.04), mid, apIn], 14);
+      tube(o.cord, 0.0045, VLAN[40].color, G.cable, info);
+      const c = [W(-0.35, 0, -0.25), W(0.35, 0, 0.25)];
+      colliders.push({ x0: Math.min(c[0].x, c[1].x), x1: Math.max(c[0].x, c[1].x), z0: Math.min(c[0].z, c[1].z), z1: Math.max(c[0].z, c[1].z) });
+      continue;
+    }
+    const rot = o.face === 'N' ? 0 : Math.PI, cw = (o.corner === 'W') === (o.face === 'N') ? -1 : 1, cx = cw * (DW / 2 - 0.08);
+    const g = new THREE.Group(); g.position.set(o.x, 0, o.z); g.rotation.y = rot;
+    const W = (x, y, z) => V3(x, y, z).applyAxisAngle(UPV, rot).add(g.position);
+    deskAt(g, DW, DD);
+    const tx = cx - cw * 0.32;
+    pcAt(g, -cw * 0.12, tx, DD); chairAt(g, -cw * 0.12, DD / 2 + 0.38);
+    G.furn.add(g); pick(g, info);
+    const og = new THREE.Group(); og.position.copy(g.position); og.rotation.y = rot;
+    box(0.13, 0.075, 0.06, M.sbox, cx, 0.7875, -DD / 2 + 0.05, og);
+    box(0.12, 0.07, 0.006, M.plate, cx, 0.7875, -DD / 2 + 0.083, og);
+    box(0.016, 0.016, 0.006, M.jack, cx - 0.026, 0.785, -DD / 2 + 0.088, og);
+    box(0.016, 0.016, 0.006, M.jack2, cx + 0.026, 0.785, -DD / 2 + 0.088, og);
+    box(0.09, 0.01, 0.002, lam(0xffe27a), cx, 0.812, -DD / 2 + 0.087, og);
+    const rise = box(0.04, 0.76, 0.025, M.canal, cx, 0.38, -DD / 2 - 0.02, og); stats.rise += 0.76;
+    G.path.add(og); pick(og, info); pick(rise, INFO.rise);
+    o.riseB = W(cx, 0.007, -DD / 2 - 0.02);
+    o.jacks = [W(cx - 0.026, 0.785, -DD / 2 + 0.09), W(cx + 0.026, 0.785, -DD / 2 + 0.09)];
+    o.fp = W(cx, 0.79, -DD / 2 + 0.09);
+    o.toUser = V3(0, 0, 1).applyAxisAngle(UPV, rot);
+    o.lx = V3(1, 0, 0).applyAxisAngle(UPV, rot);
+    const tb = W(tx, 0.93, -DD / 2 + 0.07);
+    const j = o.jacks[0], mid = j.clone().lerp(tb, 0.5); mid.y = 0.77;
+    o.cord = curvePts([j, j.clone().addScaledVector(o.toUser, 0.05).add(V3(0, -0.01, 0)), mid, tb], 18);
+    tube(o.cord, 0.0045, VLAN[o.vlan].color, G.cable, info);
+    const c = [W(-DW / 2, 0, -DD / 2), W(DW / 2, 0, DD / 2)];
+    colliders.push({ x0: Math.min(c[0].x, c[1].x), x1: Math.max(c[0].x, c[1].x), z0: Math.min(c[0].z, c[1].z), z1: Math.max(c[0].z, c[1].z) });
+    // canaleta de piso
+    const rb = o.riseB;
+    if (o.feed === 'OW' || o.feed === 'OE' || o.feed === 'AW' || o.feed === 'AE') {
+      const wx = o.feed === 'OW' ? 10.125 : o.feed === 'OE' ? 19.875 : o.feed === 'AW' ? 20.125 : 29.825;
+      const key = o.feed + '|' + rb.z.toFixed(3); const cur = raceRows[key];
+      const far = cur ? (Math.abs(rb.x - wx) > Math.abs(cur.x - wx) ? rb.x : cur.x) : rb.x;
+      raceRows[key] = { wx, z: rb.z, x: far };
+    } else if (o.feed === 'REC') {
+      o.tapX = o.x - DW / 2 - 0.06;
+      pisoSeg([o.tapX, 0.18], [o.tapX, rb.z]); pisoSeg([o.tapX, rb.z], [rb.x, rb.z]);
+    } else if (o.feed === 'S1n') pisoSeg([rb.x, 10.125], [rb.x, rb.z]);
+    else if (o.feed === 'S1s') pisoSeg([rb.x, 19.825], [rb.x, rb.z]);
+  }
+  for (const k in raceRows) { const r = raceRows[k]; pisoSeg([r.wx, r.z], [r.x, r.z]); }
+}
+function outletInfo(o) {
+  return () => {
+    const L = o.len ? o.len.map(fmt).join(' / ') + ' m (máx. 90)' : '';
+    if (o.area === 'AP') return { t: o.id + ' · Access point', s: o.room + ' · sobre mesa junto al muro', rows: [['Equipo', 'Access Point Wi-Fi 6 de mesa'], ['Salida', 'Caja de superficie con 1 jack ' + o.tags[0]], ['Jack', 'PP-C ' + o.pp[0].port + ' → SW-PoE puerto ' + o.sw[0].port + ' (PoE)'], ['Canalización', 'Charola + canaleta de muro hasta la mesa'], ['VLAN', '40 · Wi-Fi'], ['Enlace', L]], node: o.id };
+    return {
+      t: o.id + ' · ' + o.name, s: AREA[o.area] + ' · salida doble',
+      rows: [['Equipo', 'Computadora ' + o.name + ' de ' + AREA[o.area].toLowerCase()], ['Faceplate', 'Doble · ' + o.tags.join(' + ')], ['Jack 1 (datos)', 'PP-' + o.pp[0].panel + ' ' + o.pp[0].port + ' → ' + o.sw[0].name + ' Gi1/0/' + o.sw[0].port], ['Jack 2 (voz/reserva)', 'PP-' + o.pp[1].panel + ' ' + o.pp[1].port + ' → ' + o.sw[1].name + ' Gi1/0/' + o.sw[1].port], ['VLAN', o.vlan + ' · ' + VLAN[o.vlan].name], ['Enlace', L]],
+      node: o.id,
+    };
+  };
+}
+
+// ---------- Cableado ----------
+function buildRoute(o, c) {
+  const gi = o.cab[c];
+  const s = ((gi % 12) - 5.5) * 0.0135, yT = YT + 0.009 + Math.floor(gi / 12) * 0.0068;
+  const r = ((gi % 6) - 2.5) * 0.012, rz = ((Math.floor(gi / 6) % 4) - 1.5) * 0.012;
+  const pp = o.pp[c];
+  const pts = [V3(RK.front + 0.14, pp.y, pp.z), V3(24.86 + r, pp.y, pp.z), V3(24.86 + r, pp.y, 4.53 + rz), V3(24.86 + r, yT, 4.53 + rz), V3(24.86 + r, yT, CZ + s)];
+  const k = o.k[c], dy = ((k % 5) - 2) * 0.016, dd = ((Math.floor(k / 5) % 3) - 1) * 0.012;
+  const Wz = (x, y, z) => V3(x + dd, y + dy, z), Wx = (x, y, z) => V3(x, y + dy, z + dd);
+  const lane = (c ? 1 : -1) * 0.009, rb = o.riseB;
+  const F = o.feed;
+  if (F === 'REC' || F === 'S1n' || F === 'S1s' || F === 'APW') {
+    pts.push(V3(0.45, yT, CZ + s), Wz(0.15, 2.62, CZ));
+    if (F === 'REC') {
+      pts.push(Wz(0.15, 0.05, CZ), Wz(0.15, 0.05, 0.15), Wx(0.15, 0.05, 0.15), Wx(o.tapX, 0.05, 0.15), V3(o.tapX + lane, 0.007, 0.2), V3(o.tapX + lane, 0.007, rb.z + lane), V3(rb.x, 0.007, rb.z + lane));
+    } else {
+      pts.push(Wz(0.15, 2.5, CZ), Wz(0.15, 2.5, 6.45), Wz(0.15, 0.05, 6.45));
+      if (F === 'S1n') pts.push(Wz(0.15, 0.05, 10.1), Wx(0.15, 0.05, 10.1), Wx(rb.x, 0.05, 10.1), V3(rb.x + lane, 0.007, 10.15), V3(rb.x + lane, 0.007, rb.z));
+      else if (F === 'APW') pts.push(Wz(0.15, 0.05, 9.9), Wx(0.15, 0.05, 9.9), Wx(rb.x, 0.05, 9.9), V3(rb.x + lane, 0.007, rb.z));
+      else pts.push(Wz(0.15, 0.05, 19.85), Wx(0.15, 0.05, 19.85), Wx(rb.x, 0.05, 19.85), V3(rb.x + lane, 0.007, 19.8), V3(rb.x + lane, 0.007, rb.z));
+    }
+  } else {
+    const wx = F === 'OW' ? 10.1 : F === 'OE' ? 19.9 : F === 'AW' ? 20.1 : 29.85;
+    const tx = F === 'OW' ? 10.25 : F === 'OE' ? 19.75 : F === 'AW' ? 20.25 : 29.6;
+    pts.push(V3(tx, yT, CZ + s));
+    if (F === 'AW') pts.push(Wz(wx, 2.6, CZ), Wz(wx, 2.6, 10.55), Wz(wx, 0.05, 10.55));
+    else if (F === 'AE') pts.push(Wz(wx, 2.62, CZ), Wz(wx, 0.05, CZ));
+    else {
+      pts.push(Wz(wx, 2.62, CZ));
+      if (rb.z < CZ) pts.push(Wz(wx, 0.05, CZ));
+      else {
+        pts.push(Wz(wx, 2.3, CZ), Wz(wx, 2.3, 5.6), Wz(wx, 0.05, 5.6));
+        if (F === 'OE' && rb.z > 10) pts.push(Wz(wx, 0.05, 9.35), Wz(wx, 2.3, 9.35), Wz(wx, 2.3, 10.45), Wz(wx, 0.05, 10.45));
+      }
+    }
+    const sgn = Math.sign(rb.x - wx);
+    pts.push(Wz(wx, 0.05, rb.z), V3(wx + sgn * 0.04, 0.007, rb.z + lane), V3(rb.x, 0.007, rb.z + lane));
+  }
+  pts.push(V3(rb.x + lane * 0.6, 0.76, rb.z), o.jacks[c].clone().addScaledVector(o.toUser, -0.01));
+  return pts;
+}
+const rackCords = {};
+let fiberPts, ontRtr, upl = {};
+function buildCables() {
+  for (const o of OUT) {
+    o.pts = []; o.len = []; o.mats = [];
+    o.cab.forEach((g, c) => {
+      const pts = buildRoute(o, c); o.pts.push(pts); o.len.push(polyLen(pts) + RESERVE);
+      const mat = lam(COL.cable, { side: THREE.DoubleSide }); o.mats.push(mat);
+      const m = new THREE.Mesh(polyTube(pts, 0.0055, 5), mat); G.cable.add(m); pick(m, outletInfo(o));
+      // patch cord en rack: patch panel -> switch
+      const pp = o.pp[c], z = pp.z;
+      let ys, yo, sg;
+      if (pp.panel === 'A') { ys = swRowY(Yd.sw1, pp.row); yo = Yd.o37; sg = 1; }
+      else if (pp.panel === 'B') { ys = swRowY(Yd.sw2, pp.row); yo = Yd.o34; sg = -1; }
+      else { ys = Yd.poe; yo = Yd.o30; sg = -1; }
+      const cp = curvePts([V3(FRONT, pp.y, z), V3(FRONT - 0.03, pp.y - sg * 0.008, z), V3(FRONT - 0.085, yo, z), V3(FRONT - 0.03, ys + sg * 0.008, z), V3(FRONT, ys, z)], 14);
+      rackCords[o.id + c] = cp;
+      tube(cp, 0.0035, VLAN[o.vlan].color, G.cable);
+    });
+  }
+  const zc = RK.zc, wanZ = portZ(0.62), sfpZ = portZ(0.87);
+  const mkUp = (a, b) => curvePts([a, V3(FRONT - 0.03, a.y, a.z), V3(FRONT - 0.07, a.y, zc + 0.33), V3(FRONT - 0.07, b.y, zc + 0.33), V3(FRONT - 0.03, b.y, b.z), b], 22);
+  upl.A = mkUp(V3(FRONT, Yd.sw1, sfpZ), V3(FRONT, Yd.rtr, portZ(0.70)));
+  upl.B = mkUp(V3(FRONT, Yd.sw2, sfpZ), V3(FRONT, Yd.rtr, portZ(0.74)));
+  upl.C = mkUp(V3(FRONT, Yd.poe, portZ(PPU(8))), V3(FRONT, Yd.rtr, portZ(0.78)));
+  for (const k of ['A', 'B', 'C']) tube(upl[k], 0.004, COL.uplink, G.cable);
+  ontRtr = curvePts([V3(RK.front + 0.02, Yd.ont, zc + 0.02), V3(FRONT - 0.03, Yd.ont - 0.01, zc + 0.02), V3(FRONT - 0.03, Yd.rtr + 0.012, wanZ), V3(FRONT, Yd.rtr, wanZ)], 12);
+  tube(ontRtr, 0.0035, COL.wan, G.cable);
+  const a = V3(24.3, 6.62, -3.24), b = V3(24.3, 2.86, -0.2), drop = [];
+  for (let k = 0; k <= 28; k++) { const t = k / 28, p = a.clone().lerp(b, t); p.y -= 0.3 * 4 * t * (1 - t); drop.push(p); }
+  fiberPts = drop.concat([V3(24.3, 2.76, -0.26), V3(24.3, 2.67, -0.18), V3(24.3, 2.67, 0.2), V3(24.3, 2.88, 0.3), V3(24.3, 2.88, 4.62), V3(24.3, 2.03, 4.62), V3(24.3, Yd.ont, 4.62), V3(RK.front + 0.18, Yd.ont, zc - 0.12)]);
+  tube(fiberPts, 0.007, COL.fiber, G.fiber, INFO.fiber);
+  box(0.06, 0.08, 0.05, M.steel, 24.3, 2.86, -0.15, G.fiber);
+  sleeveRect(24.3, 2.67, 0, 'z', 0.1, 0.1, INFO.fiber);
+  const cd = new THREE.Mesh(polyTube([V3(24.3, 2.88, 0.15), V3(24.3, 2.88, 4.62), V3(24.3, 2.05, 4.62)], 0.013, 8), M.conduit); G.path.add(cd); pick(cd, INFO.conduit);
+  tube([V3(25.6, 2.25, 0.18), V3(25.6, 2.5, 0.18), V3(25.6, 2.5, 4.5), V3(24.95, 2.5, 4.5), V3(24.95, 2.03, 4.5)], 0.006, COL.ground, G.rack, INFO.tmgb);
+}
+function fullRoute(o) {
+  if (o.area === 'AP') return fiberPts.concat(ontRtr, upl.C.slice().reverse(), rackCords[o.id + 0].slice().reverse(), o.pts[0], o.cord);
+  const up = o.pp[0].panel === 'A' ? upl.A : upl.B;
+  return fiberPts.concat(ontRtr, up.slice().reverse(), rackCords[o.id + 0].slice().reverse(), o.pts[0], o.cord);
+}
+
+// ---------- Etiquetas ----------
+const labels = [];
+let labelsOn = true;
+function addLabel(text, pos, kind, opt) {
+  const el = document.createElement('div'); el.className = 'lbl ' + kind; el.textContent = text; el.hidden = true; labelRoot.appendChild(el);
+  const L = Object.assign({ el, pos, kind, max: 12, occ: true, shown: false, occluded: false }, opt || {}); labels.push(L); return L;
+}
+function buildLabels() {
+  for (const r of ROOMS) addLabel(r.name, V3((r.x0 + r.x1) / 2, 1.3, (r.z0 + r.z1) / 2 + (r.id === 'OPE' ? 1.4 : 0)), 'room', { occ: false });
+  addLabel('Telecom / Servidores', V3(19.86, 2.32, 5.05), 'door', { max: 11 });
+  addLabel('Administración', V3(19.86, 2.32, 9.9), 'door', { max: 11 });
+  addLabel('Recepción', V3(10.14, 2.32, 5.0), 'door', { max: 11 });
+  addLabel('Área operativa', V3(9.86, 2.32, 5.0), 'door', { max: 11 });
+  addLabel('Sala de reuniones', V3(8.6, 2.32, 9.9), 'door', { max: 11 });
+  addLabel('Entrada principal', V3(-0.25, 2.65, 5.7), 'eq', { max: 40, occ: false, outside: true });
+  addLabel('Poste del ISP · fibra', V3(24.3, 7.4, -3.4), 'eq', { max: 60, occ: false, outside: true });
+  addLabel('Acometida', V3(24.3, 3.15, -0.35), 'eq', { max: 30, occ: false, outside: true });
+  addLabel('Rack 19" · 42U', V3(24.5, 2.22, RK.zc), 'eq', { max: 10 });
+  addLabel('Charola 200 × 50 mm', V3(5.0, 2.88, CZ), 'eq', { max: 13 });
+  addLabel('Charola 200 × 50 mm', V3(15.0, 2.88, CZ), 'eq', { max: 13 });
+  addLabel('Charola', V3(27.0, 2.88, CZ), 'eq', { max: 10 });
+  addLabel('Bajada · Área 1', V3(0.2, 1.8, CZ), 'eq', { max: 7 });
+  addLabel('Bajada oeste', V3(10.15, 1.8, CZ), 'eq', { max: 7 });
+  addLabel('Bajada este', V3(19.85, 1.8, CZ), 'eq', { max: 7 });
+  addLabel('Canaleta a Administración', V3(20.15, 2.45, 7.5), 'eq', { max: 6 });
+  addLabel('Bajada · Admin. este', V3(29.8, 1.8, CZ), 'eq', { max: 7 });
+  addLabel('Canaleta de piso', V3(11.0, 0.12, ROWZ(2) - 0.39), 'eq', { max: 5 });
+  addLabel('Minisplit', V3(29.7, 2.72, 6.8), 'eq', { max: 6 });
+  addLabel('Tierra TMGB', V3(25.6, 2.38, 0.2), 'eq', { max: 5 });
+  const rk = [['ONT del ISP · bandeja', Yd.ont], ['Firewall / router', Yd.rtr], ['Patch panel A', Yd.ppa], ['Switch 01', Yd.sw1], ['Switch 02', Yd.sw2], ['Patch panel B', Yd.ppb], ['Switch PoE', Yd.poe], ['Patch panel C', Yd.ppc], ['PDU', uC(4)], ['UPS', uC(1, 2)]];
+  for (const [t, y] of rk) addLabel(t, V3(RK.front - 0.08, y, RK.zc - 0.46), 'rk', { max: 3.4, anchor: 'right' });
+  for (const o of OUT) o.label = addLabel(o.area === 'AP' ? o.id : o.id + ' · ' + o.tags.join('/'), o.fp.clone().add(V3(0, o.area === 'AP' ? 0.3 : 0.1, 0)), 'node', { max: o.area === 'AP' ? 8 : 3.2, node: o });
+}
+const ray = new THREE.Raycaster(), tmpV = V3(), tmpD = V3();
+let occList = [];
+function refreshOcc() { occList = occluders.filter((m) => m.visible); }
+function updateLabels(frame) {
+  const w = app.clientWidth, h = app.clientHeight, cy = camera.position.y, high = cy > 5.5;
+  const p = camera.position, outside = p.z < -0.2 || p.z > BD + 0.2 || p.x < -0.2 || p.x > BW + 0.2;
+  const doOcc = frame % 8 === 0;
+  for (const L of labels) {
+    let show = labelsOn;
+    const dist = p.distanceTo(L.pos), isSel = L.node && selected === L.node;
+    if (show) {
+      if (L.kind === 'room') show = cy > 9;
+      else if (L.kind === 'door') show = !high && dist < L.max;
+      else if (L.kind === 'node') show = isSel || (!high && dist < L.max);
+      else show = dist < L.max && (!high || L.max > 20);
+      if (L.outside && !outside && !high) show = false;
+    }
+    if (show) { tmpV.copy(L.pos).project(camera); if (tmpV.z > 1 || tmpV.z < -1 || Math.abs(tmpV.x) > 1.1 || Math.abs(tmpV.y) > 1.1) show = false; }
+    if (show && L.occ && !isSel && !high) {
+      if (doOcc || !L.shown) { tmpD.subVectors(L.pos, p).normalize(); ray.set(p, tmpD); ray.near = 0; ray.far = Math.max(0, dist - 0.12); L.occluded = ray.intersectObjects(occList, false).length > 0; }
+      if (L.occluded) show = false;
+    }
+    if (show) {
+      const x = (tmpV.x * 0.5 + 0.5) * w, y = (-tmpV.y * 0.5 + 0.5) * h;
+      L.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) translate(' + (L.anchor === 'right' ? 'calc(-100% - 6px)' : '-50%') + ',-50%)';
+      L.el.classList.toggle('sel', !!isSel);
+    }
+    if (show !== L.shown) { L.el.hidden = !show; L.shown = show; }
+  }
+}
+
+// ---------- Selección y ruta ----------
+let selected = null, routePoly = null, routeThin = null, routeThick = null, routeLine = null, routeT = 0;
+const pulses = [];
+const routeMat = new THREE.MeshBasicMaterial({ color: COL.route });
+const routeLineMat = new THREE.LineBasicMaterial({ color: COL.route, transparent: true, opacity: 0.55, depthTest: false });
+function makePulses() {
+  const tex = canvasTex(64, 64, (g, w, h) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,120,170,.95)'); gr.addColorStop(1, 'rgba(224,51,122,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  for (let k = 0; k < 6; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false })); s.scale.set(0.028, 0.028, 1); s.renderOrder = 12; s.visible = false; G.route.add(s); pulses.push(s); }
+}
+function selectOut(id) {
+  selected = id ? outById[id] : null;
+  for (const o of OUT) o.mats.forEach((m, c) => {
+    if (!selected) { m.color.setHex(COL.cable); m.transparent = false; m.opacity = 1; m.depthWrite = true; }
+    else if (o === selected) { m.color.setHex(c === 0 ? COL.route : COL.cable); m.transparent = false; m.opacity = 1; m.depthWrite = true; }
+    else { m.color.setHex(COL.cable); m.transparent = true; m.opacity = 0.2; m.depthWrite = false; }
+    m.needsUpdate = true;
+  });
+  for (const ob of [routeThin, routeThick, routeLine]) if (ob) { G.route.remove(ob); ob.geometry.dispose(); }
+  routeThin = routeThick = routeLine = null; routePoly = null;
+  if (selected) {
+    const pts = fullRoute(selected); routePoly = new Poly(pts);
+    routeThin = new THREE.Mesh(polyTube(pts, 0.0062, 6), routeMat); G.route.add(routeThin);
+    routeThick = new THREE.Mesh(polyTube(pts, 0.03, 6), routeMat); G.route.add(routeThick);
+    routeLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), routeLineMat); routeLine.renderOrder = 10; G.route.add(routeLine);
+    updateRouteLOD();
+  }
+  pulses.forEach((p) => (p.visible = !!selected));
+  document.querySelectorAll('#nodeRows tr[data-id]').forEach((tr) => tr.setAttribute('aria-selected', String(!!selected && tr.dataset.id === selected.id)));
+  $('#clearSel').hidden = !selected;
+}
+function updateRouteLOD() { if (!routeThin) return; const far = camera.position.y > 7; routeThin.visible = !far; routeThick.visible = far; }
+function updatePulses(dt) {
+  if (!routePoly) return;
+  routeT += dt * (reduceMotion ? 2 : 9);
+  const L = routePoly.len;
+  pulses.forEach((p, k) => routePoly.at(((routeT - (k * L) / pulses.length) % L + L) % L, p.position));
+}
+function showInfo(info) {
+  if (typeof info === 'function') info = info();
+  if (!info) { $('#info').hidden = true; return; }
+  $('#infoTitle').textContent = info.t; $('#infoSub').textContent = info.s || '';
+  const dl = $('#infoRows'); dl.innerHTML = '';
+  for (const [k, v] of info.rows || []) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); }
+  const acts = $('#infoActs'); acts.innerHTML = '';
+  if (info.node) {
+    const b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'btn primary'; b1.textContent = selected && selected.id === info.node ? 'Ocultar ruta' : 'Ver ruta completa';
+    b1.onclick = () => { selectOut(selected && selected.id === info.node ? null : info.node); showInfo(outletInfo(outById[info.node])); };
+    const b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'btn'; b2.textContent = 'Ir a la salida';
+    b2.onclick = () => goToOut(info.node);
+    acts.append(b1, b2);
+  }
+  acts.hidden = !info.node;
+  $('#info').hidden = false;
+}
+
+// ---------- Cámara ----------
+let mode = 'intro';
+const orbit = { target: V3(15, 0.5, 10), r: 42, theta: 0.45, phi: 0.86 };
+const player = { x: -4.5, z: 5.7, yaw: -Math.PI / 2, pitch: -0.05 };
+const look = { yaw: 0, pitch: 0 };
+let tween = null;
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+function orbitPos(out) { const o = orbit, sp = Math.sin(o.phi); return out.set(o.target.x + o.r * sp * Math.sin(o.theta), o.target.y + o.r * Math.cos(o.phi), o.target.z + o.r * sp * Math.cos(o.theta)); }
+function applyOrbit() { orbitPos(camera.position); camera.lookAt(orbit.target); }
+function lookFrom(pos, tgt) { const d = V3().subVectors(tgt, pos).normalize(); return { yaw: Math.atan2(-d.x, -d.z), pitch: Math.asin(Math.max(-1, Math.min(1, d.y))) }; }
+function flyTo(pos, tgt, dur, done) {
+  const dir = V3(); camera.getWorldDirection(dir); const from = camera.position.clone();
+  tween = { fp: from, ft: from.clone().addScaledVector(dir, Math.max(2, from.distanceTo(tgt) * 0.5)), tp: pos.clone(), tt: tgt.clone(), t: 0, dur: reduceMotion ? 0.001 : dur, done };
+}
+function collides(x, z) {
+  const r = 0.22;
+  if (x < -16 || x > 46 || z < -10 || z > 34) return true;
+  for (const c of colliders) if (x > c.x0 - r && x < c.x1 + r && z > c.z0 - r && z < c.z1 + r) return true;
+  return false;
+}
+const keys = {}, joy = { x: 0, y: 0, id: null };
+function updateWalk(dt) {
+  let mx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x;
+  let mz = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) - joy.y;
+  const l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; }
+  const sp = (keys.ShiftLeft || keys.ShiftRight ? 4.2 : 2.0) * dt, yw = player.yaw;
+  const dx = (-Math.sin(yw) * mz + Math.cos(yw) * mx) * sp, dz = (-Math.cos(yw) * mz - Math.sin(yw) * mx) * sp;
+  if (dx && !collides(player.x + dx, player.z)) player.x += dx;
+  if (dz && !collides(player.x, player.z + dz)) player.z += dz;
+  camera.position.set(player.x, 1.6, player.z); camera.rotation.set(player.pitch, player.yaw, 0);
+}
+function freeSpot(x, z) {
+  if (!collides(x, z)) return [x, z];
+  for (let r = 0.2; r < 2.5; r += 0.2) for (let a = 0; a < 6.28; a += 0.5) { const nx = x + Math.cos(a) * r, nz = z + Math.sin(a) * r; if (!collides(nx, nz)) return [nx, nz]; }
+  return [x, z];
+}
+
+// ---------- Capas ----------
+function setCeiling(on) { G.ceiling.visible = on; $('#lyCeiling').checked = on; }
+function setCut(on) {
+  for (const p of wallPieces) {
+    if (!on) { p.m.visible = true; p.m.scale.y = 1; p.m.position.y = (p.y0 + p.y1) / 2; continue; }
+    if (p.y0 >= CUT) { p.m.visible = false; continue; }
+    const top = Math.min(p.y1, CUT); p.m.visible = true; p.m.scale.y = (top - p.y0) / (p.y1 - p.y0); p.m.position.y = p.y0 + (top - p.y0) / 2;
+  }
+  $('#lyCut').checked = on; refreshOcc();
+}
+function setXray(on) { for (const m of [M.canal, M.piso]) { m.opacity = on ? 0.2 : 1; m.depthWrite = !on; m.needsUpdate = true; } $('#lyXray').checked = on; }
+function applyView(v) { setCeiling(!!v.ceiling); setCut(!!v.cut); setXray(!!v.xray); }
+
+// ---------- Recorrido guiado ----------
+let STOPS = [], tourI = 0, playing = false, playT = 0;
+const TOUR_OUT = 'OPE-08';
+function buildStops() {
+  const o = outById[TOUR_OUT], P = (a) => V3(a[0], a[1], a[2]);
+  const vp = o.fp.clone().addScaledVector(o.toUser, 1.3).addScaledVector(o.lx, -0.75); vp.y = 1.4;
+  const vt = o.fp.clone().addScaledVector(o.lx, 0.12); vt.y = 0.62;
+  STOPS = [
+    { t: 'Acometida del proveedor', d: 'El internet llega por fibra óptica desde el poste de la calle norte. Entra por un pasamuros en la fachada, junto al cuarto de telecomunicaciones, y baja por tubo conduit hasta el rack.', p: P([33, 7.5, -10.5]), g: P([24.3, 3.2, -1.2]), v: { ceiling: true } },
+    { t: 'Entrada y recepción', d: 'La entrada principal está en el muro oeste. En recepción hay 2 computadoras con salida doble. Sus cables llegan por la canaleta del muro norte y una canaleta de piso hasta cada escritorio. El AP-1 va sobre una mesa junto al muro de la sala y da Wi-Fi a toda el Área 1.', p: P([8.7, 1.85, 0.9]), g: P([3.6, 0.55, 3.0]), v: { ceiling: true } },
+    { t: 'Charola principal', d: 'La charola de 200 × 50 mm corre a 2.70 m de altura los 30 m del edificio, de muro oeste a muro este, y pasa sobre el rack. Lleva 83 cables con ' + fmt(occTray) + ' % de ocupación, así que la holgura es de ' + fmt(100 - occTray) + ' %, arriba del 40 % que pide el problema.', p: P([18.8, 1.75, 5.25]), g: P([8, 2.5, CZ]), v: { ceiling: true } },
+    { t: 'Telecomunicaciones / Servidores', d: 'El rack de 19" queda de frente a la puerta, con 4 m libres al frente. El cuarto tiene minisplit, puesta a tierra (TIA-607) y no tiene ventanas. Todos los cables suben del rack a la charola.', p: P([20.7, 1.7, 5.7]), g: P([24.0, 1.2, RK.zc]), v: { ceiling: true } },
+    { t: 'Rack de 19"', d: 'De arriba hacia abajo: bandeja con la ONT del proveedor, firewall/router, organizador, patch panel A, switch 01, switch 02, organizador, patch panel B, switch PoE, organizador, patch panel C, PDU y UPS. Cada patch cord lleva el color de la VLAN de su área.', p: P([23.05, 1.42, RK.zc - 0.12]), g: P([24.06, 1.5, RK.zc + 0.02]), v: { ceiling: true } },
+    { t: 'Bajadas al área operativa', d: 'Los cables salen de la charola, bajan por canaleta de 100 × 50 mm y corren al pie del muro. Junto a la puerta, la canaleta sube y pasa por encima del marco para no estorbar el paso. Aquí la canaleta se ve transparente.', p: P([12.4, 1.55, 7.2]), g: P([10.1, 1.2, 4.7]), v: { ceiling: true, xray: true } },
+    { t: 'Área operativa', d: '30 computadoras en 10 filas de 3. La PC 1 y la PC 2 de cada fila salen de la canaleta del muro oeste; la PC 3, del muro este. De la canaleta del muro a cada escritorio va canaleta de piso. El AP-2 va sobre una mesa junto al muro este.', p: P([19.4, 2.6, 19.0]), g: P([13.8, 0.4, 9.5]), v: { ceiling: true } },
+    { t: 'Salida doble · ' + o.id, d: 'La canaleta de piso llega a la pata trasera del escritorio, sube y termina en una caja con faceplate doble: jack ' + o.tags[0] + ' para datos y ' + o.tags[1] + ' para voz o reserva. Enlace: ' + fmt(Math.max.apply(null, o.len)) + ' m de 90 m permitidos.', p: vp, g: vt, v: { ceiling: true, xray: true } },
+    { t: 'Administración', d: '5 puestos de trabajo. PC1, PC3 y PC5 salen de la canaleta del muro oeste, que llega por arriba desde el cuarto de telecomunicaciones. PC2 y PC4 salen del muro este, igual que el AP-3, que va sobre una mesa.', p: P([20.8, 2.2, 19.0]), g: P([25.6, 0.6, 12.6]), v: { ceiling: true } },
+    { t: 'Sala de reuniones', d: '3 computadoras con salida doble. PC1 y PC2 toman la canaleta del muro norte de la sala; PC3, la del muro sur. Todo baja por la canaleta del muro oeste, que viene de la charola principal.', p: P([9.3, 2.4, 19.1]), g: P([3.8, 0.5, 12.6]), v: { ceiling: true } },
+    { t: 'Vista general de la red', d: '40 salidas dobles (80 RJ45) y 3 access points: 83 cables en 3 patch panels de 48, con ' + (144 - 83) + ' puertos libres (42 %). Elige cualquier salida en la tabla para ver su ruta completa, desde el poste del proveedor hasta la PC.', p: P([38, 30, 36]), g: P([15, 0, 10]), v: { ceiling: false, cut: true } },
+  ];
+  const dots = $('#tourDots'); dots.innerHTML = '';
+  STOPS.forEach((s, i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'Paso ' + (i + 1) + ': ' + s.t); b.onclick = () => goStop(i); dots.appendChild(b); });
+}
+function goStop(i) {
+  tourI = Math.max(0, Math.min(STOPS.length - 1, i)); playT = 0;
+  const s = STOPS[tourI];
+  $('#tourStep').textContent = pad2(tourI + 1) + ' / ' + pad2(STOPS.length);
+  $('#tourTitle').textContent = s.t; $('#tourText').textContent = s.d;
+  document.querySelectorAll('#tourDots button').forEach((b, k) => (k === tourI ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')));
+  $('#tPrev').disabled = tourI === 0; $('#tNext').textContent = tourI === STOPS.length - 1 ? 'Terminar' : 'Siguiente';
+  applyView(s.v);
+  flyTo(s.p, s.g, 2.2, () => { const l = lookFrom(s.p, s.g); look.yaw = l.yaw; look.pitch = l.pitch; });
+}
+function setPlaying(on) { playing = on; playT = 0; $('#tPlay').textContent = on ? 'Pausa' : 'Reproducir'; }
+
+// ---------- Modos ----------
+function uiForMode(m) {
+  document.querySelectorAll('.modes button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
+  $('#intro').hidden = m !== 'intro'; $('#tour').hidden = m !== 'tour';
+  $('#hint').hidden = m !== 'walk' || coarse; $('#minimap').hidden = m !== 'walk'; $('#joy').hidden = !(m === 'walk' && coarse);
+  if (m !== 'tour') setPlaying(false);
+}
+function walkTarget() { return V3(player.x - Math.sin(player.yaw) * Math.cos(player.pitch), 1.6 + Math.sin(player.pitch), player.z - Math.cos(player.yaw) * Math.cos(player.pitch)); }
+function setMode(m) {
+  const prev = mode; mode = m; uiForMode(m);
+  if (m === 'tour') { if (!selected || prev !== 'tour') selectOut(TOUR_OUT); goStop(prev === 'tour' ? tourI : 0); }
+  else if (m === 'walk') {
+    applyView({ ceiling: true, cut: false });
+    const c = camera.position;
+    if (prev !== 'intro' && c.y < 4 && !collides(c.x, c.z)) { player.x = c.x; player.z = c.z; const d = V3(); camera.getWorldDirection(d); player.yaw = Math.atan2(-d.x, -d.z); player.pitch = 0; }
+    flyTo(V3(player.x, 1.6, player.z), walkTarget(), 1.4); sizeMinimap();
+  } else if (m === 'orbit') { applyView({ ceiling: false, cut: true }); const p = V3(); orbitPos(p); flyTo(p, orbit.target, 1.6); }
+}
+function goToOut(id) {
+  const o = outById[id];
+  if (selected !== o) selectOut(id);
+  { const p = o.fp.clone().addScaledVector(o.toUser, 1.4); [player.x, player.z] = freeSpot(p.x, p.z); const l = lookFrom(V3(player.x, 1.6, player.z), o.fp); player.yaw = l.yaw; player.pitch = Math.max(-0.65, l.pitch); }
+  if (narrow()) $('#panel').classList.remove('open');
+  mode = 'walk'; uiForMode('walk'); applyView({ ceiling: true, cut: false }); sizeMinimap();
+  flyTo(V3(player.x, 1.6, player.z), walkTarget(), 1.6);
+}
+
+// ---------- Plano ----------
+const mm = $('#minimap'), mctx = mm.getContext('2d');
+let mmS = 1, mmOx = 0, mmOz = 0, mmDpr = 1;
+const css = {};
+function readCss() {
+  const cs = getComputedStyle(document.documentElement);
+  ['--panel', '--ink', '--muted', '--line', '--soft', '--accent', '--route', '--scene'].forEach((k) => (css[k] = cs.getPropertyValue(k).trim()));
+  if (css['--scene']) scene.background.set(css['--scene']);
+}
+function sizeMinimap() {
+  const r = mm.getBoundingClientRect(); if (!r.width) return;
+  mmDpr = Math.min(2, window.devicePixelRatio || 1); mm.width = Math.round(r.width * mmDpr); mm.height = Math.round(r.height * mmDpr);
+  const pad = 8 * mmDpr; mmS = Math.min((mm.width - 2 * pad) / BW, (mm.height - 2 * pad) / BD);
+  mmOx = (mm.width - mmS * BW) / 2; mmOz = (mm.height - mmS * BD) / 2;
+}
+const mX = (x) => mmOx + x * mmS, mZ = (z) => mmOz + z * mmS;
+function drawMinimap() {
+  if (mm.hidden || !mm.width) return;
+  const g = mctx, s = mmS, dpr = mmDpr; g.clearRect(0, 0, mm.width, mm.height);
+  g.fillStyle = css['--soft']; g.fillRect(mX(0), mZ(0), BW * s, BD * s);
+  g.strokeStyle = css['--line']; g.lineWidth = dpr;
+  for (const r of ROOMS) g.strokeRect(mX(r.x0), mZ(r.z0), (r.x1 - r.x0) * s, (r.z1 - r.z0) * s);
+  g.strokeStyle = css['--muted']; g.lineWidth = 2 * dpr; g.strokeRect(mX(0), mZ(0), BW * s, BD * s);
+  g.fillStyle = css['--muted']; g.font = '600 ' + 8 * dpr + 'px ' + FONT_D; g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const r of ROOMS) g.fillText(r.short, mX((r.x0 + r.x1) / 2), mZ(r.z0 + 0.9));
+  g.strokeStyle = css['--accent']; g.lineWidth = 2 * dpr; g.beginPath(); g.moveTo(mX(0.35), mZ(CZ)); g.lineTo(mX(29.65), mZ(CZ)); g.stroke();
+  g.fillStyle = css['--ink']; g.fillRect(mX(24), mZ(RK.zc - 0.4), s, 0.8 * s);
+  for (const o of OUT) { g.fillStyle = hex(VLAN[o.vlan].color); g.beginPath(); g.arc(mX(o.x), mZ(o.z), 1.7 * dpr, 0, 7); g.fill(); }
+  if (selected) { g.strokeStyle = css['--route']; g.lineWidth = 2 * dpr; g.beginPath(); selected.pts[0].forEach((p, i) => (i ? g.lineTo(mX(p.x), mZ(p.z)) : g.moveTo(mX(p.x), mZ(p.z)))); g.stroke(); }
+  const px = mX(Math.max(-0.5, Math.min(BW + 0.5, player.x))), pz = mZ(Math.max(-0.5, Math.min(BD + 0.5, player.z))), yw = player.yaw;
+  g.fillStyle = css['--route']; g.beginPath();
+  g.moveTo(px - Math.sin(yw) * 7 * dpr, pz - Math.cos(yw) * 7 * dpr);
+  g.lineTo(px + Math.cos(yw) * 4 * dpr + Math.sin(yw) * 3 * dpr, pz - Math.sin(yw) * 4 * dpr + Math.cos(yw) * 3 * dpr);
+  g.lineTo(px - Math.cos(yw) * 4 * dpr + Math.sin(yw) * 3 * dpr, pz + Math.sin(yw) * 4 * dpr + Math.cos(yw) * 3 * dpr);
+  g.closePath(); g.fill();
+}
+mm.addEventListener('click', (e) => {
+  const r = mm.getBoundingClientRect(), x = ((e.clientX - r.left) * mmDpr - mmOx) / mmS, z = ((e.clientY - r.top) * mmDpr - mmOz) / mmS;
+  if (x < 0.3 || x > BW - 0.3 || z < 0.3 || z > BD - 0.3) return;
+  [player.x, player.z] = freeSpot(x, z);
+});
+
+// ---------- Panel ----------
+function buildPanel() {
+  const tb = $('#nodeRows'); tb.innerHTML = '';
+  const groups = [['OPE', 'Área 2 · Operativa'], ['ADM', 'Área 3 · Administración'], ['REC', 'Área 1 · Recepción'], ['SAL', 'Área 1 · Sala de reuniones'], ['AP', 'Access points']];
+  for (const [area, title] of groups) {
+    const gr = document.createElement('tr'); gr.className = 'grp'; gr.innerHTML = '<td colspan="5">' + title + '</td>'; tb.appendChild(gr);
+    for (const o of OUT.filter((q) => q.area === area)) {
+      const tr = document.createElement('tr'); tr.dataset.id = o.id; tr.tabIndex = 0; tr.setAttribute('aria-selected', 'false');
+      const L = Math.max.apply(null, o.len), pct = Math.min(100, (L / 90) * 100);
+      tr.innerHTML = '<td><span class="nid">' + o.id + '</span></td><td>' + o.name + '</td><td class="mono">' + o.tags.join('·') + '</td><td><span class="vl" style="--c:' + hex(VLAN[o.vlan].color) + '">' + o.vlan + '</span></td><td class="num"><span class="len">' + fmt(L) + '</span><span class="bar"><i style="width:' + pct.toFixed(0) + '%"></i></span></td>';
+      const act = () => { selectOut(o.id); showInfo(outletInfo(o)); };
+      tr.addEventListener('click', act); tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+      tb.appendChild(tr);
+    }
+  }
+  const all = OUT.flatMap((o) => o.len), total = all.reduce((a, b) => a + b, 0), max = Math.max.apply(null, all);
+  $('#sCable').textContent = Math.round(total).toLocaleString('es-MX'); $('#sMax').textContent = fmt(max);
+  const lg = $('#legend'); lg.innerHTML = '';
+  [[COL.fiber, 'Fibra óptica del ISP'], [COL.cable, 'UTP Cat 6 horizontal'], [VLAN[10].color, 'Patch cord · VLAN 10 Operativa'], [VLAN[20].color, 'Patch cord · VLAN 20 Administración'], [VLAN[30].color, 'Patch cord · VLAN 30 Recepción y sala'], [VLAN[40].color, 'Patch cord · VLAN 40 Wi-Fi'], [COL.uplink, 'Troncales switch → firewall'], [COL.conduit, 'Tubo conduit de la fibra'], [COL.ground, 'Puesta a tierra'], [COL.route, 'Ruta seleccionada']]
+    .forEach(([c, t]) => { const li = document.createElement('li'); li.innerHTML = '<span class="sw" style="--c:' + hex(c) + '"></span>' + t; lg.appendChild(li); });
+  // materiales: tu lista vs modelo
+  const cable = Math.ceil(total / 10) * 10, reels = Math.ceil(total / 305);
+  const trayTramos = Math.ceil(stats.tray / 3);
+  const R = (a, mine, model, note, chg) => ({ a, mine, model, note, chg: chg == null ? mine !== model : chg });
+  const sections = [
+    ['Cableado', [
+      R('Cable UTP Cat 6', '1,500–1,600 m', cable.toLocaleString('es-MX') + ' m', reels + ' bobinas de 305 m · ' + all.length + ' cables, promedio ' + fmt(total / all.length) + ' m', true),
+      R('Keystone RJ45 Cat 6', '76', '83', '80 en salidas + 3 de los AP'),
+      R('Faceplate doble', '38', '40', '40 salidas: 2 recepción, 3 sala, 30 operativa, 5 admin.'),
+      R('Patch cords Cat 6', '76', '126', '83 en rack + 40 al PC + 3 al AP'),
+      R('Etiquetas para cable', '152', '166', '83 cables × 2 extremos'),
+      R('Cinchos', '1 paquete', '1 paquete'),
+      R('Cinta aislante', '2 rollos', '2 rollos'),
+      R('Rosetas / cajas de superficie', '38', '43', '40 salidas + 3 AP'),
+    ]],
+    ['Rack y distribución', [
+      R('Rack 19"', '1', '1 (42U)'.replace(' (42U)', ''), '42U, 800 × 1000 mm', false),
+      R('Patch panel Cat 6 de 48 puertos', '3', '3', '83 de 144 usados: 42 % libres'),
+      R('Switch Gigabit 48 puertos', '2', '2'),
+      R('Organizadores horizontales', '3–4', '4', '', false),
+      R('PDU / regleta para rack', '1', '1'),
+      R('UPS', '1', '1'),
+      R('Bandeja para rack', '1–2', '1', 'Para la ONT del proveedor', false),
+      R('Sistema de puesta a tierra', '1', '1'),
+    ]],
+    ['Canalización', [
+      R('Charola principal 200 × 50 mm', '30 m', fmt(stats.tray) + ' m', trayTramos + ' tramos de 3 m', false),
+      R('Canaleta secundaria 100 × 50 mm', '45 m', Math.ceil(stats.canal) + ' m', 'Bajadas, perímetro y saltos sobre puertas · ' + Math.ceil(stats.canal / 2) + ' tramos de 2 m', true),
+      R('Canaleta de piso 60 × 13 mm', '—', Math.ceil(stats.piso) + ' m', 'Del muro a cada escritorio', true),
+      R('Canaleta 40 × 25 mm (subida a la mesa)', '—', Math.ceil(stats.rise) + ' m', '43 subidas de 0.76 m: 40 escritorios y 3 mesas de AP', true),
+      R('Curvas / codos', '10 pz', stats.elbows + ' pz', 'Esquinas, saltos sobre puertas y derivaciones', true),
+      R('Uniones de charola', '12 pz', (trayTramos - 1) + ' pz', '', false),
+      R('Abrazaderas', '40 pz', '40 pz'),
+      R('Soportes para charola', '15 pz', stats.hangers + ' pz', 'Uno cada 1.5 m', true),
+      R('Tornillería', '1 paquete', '1 paquete'),
+      R('Pasamuros con sello cortafuego', '—', stats.sleeves + ' pz', '', true),
+      R('Tubo conduit 3/4" (fibra del ISP)', '—', Math.ceil(conduitLen) + ' m', 'De la fachada norte al rack', true),
+    ]],
+    ['Inalámbrico', [
+      R('Access points', '3', '3'),
+      R('Cables Cat 6 adicionales (AP)', '3', '3', 'Incluidos en el total de cable'),
+      R('Puertos adicionales en patch panel', '3', '3', 'PP-C 1 a 3'),
+      R('Switch PoE', '1', '1', '8 puertos PoE+'),
+      R('Soporte para montaje de AP', '1', '3 mesas', 'Cada AP va sobre una mesa junto al muro', true),
+    ]],
+  ];
+  $('#matRows').innerHTML = sections.map(([t, rows]) => '<tr class="sec"><td colspan="3">' + t + '</td></tr>' + rows.map((r) => '<tr><td>' + r.a + (r.note ? '<small>' + r.note + '</small>' : '') + '</td><td>' + r.mine + '</td><td class="' + (r.chg ? 'chg' : '') + '">' + r.model + '</td></tr>').join('')).join('');
+  const crit = [
+    ['Enlace más largo: ' + fmt(max) + ' m', 'Límite de 90 m (TIA-568). Todas las salidas cumplen.'],
+    ['Cada salida con 2 RJ45', '40 faceplates dobles = 80 jacks Cat 6.'],
+    ['Holgura de puertos: 42 %', '83 puertos usados de 144 en 3 patch panels de 48.'],
+    ['Charola al ' + fmt(occTray) + ' %', 'Holgura de ' + fmt(100 - occTray) + ' %, arriba del 40 % mínimo.'],
+    ['Canaleta más cargada al ' + fmt(occCanal) + ' %', 'Bajada oeste del área operativa, 40 cables en 100 × 50 mm.'],
+    ['Un solo cuarto de telecomunicaciones', 'Concentra los 83 cables, sin ventanas y con tierra física.'],
+  ];
+  $('#crit').innerHTML = crit.map(([a, b]) => '<li><b>✓</b><span>' + a + '<small>' + b + '</small></span></li>').join('');
+}
+let conduitLen = 0;
+
+// ---------- Eventos ----------
+function isVisible(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
+function pickAt(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera); ray.near = 0; ray.far = 200;
+  const hits = ray.intersectObjects(occList.concat(pickables), true);
+  for (const h of hits) {
+    if (!isVisible(h.object)) continue;
+    let o = h.object; while (o && !o.userData.info) o = o.parent;
+    if (!o) { showInfo(null); return; }
+    const info = o.userData.info; showInfo(info);
+    const res = typeof info === 'function' ? info() : info;
+    if (res && res.node) selectOut(res.node);
+    return;
+  }
+  showInfo(null);
+}
+const ptrs = new Map();
+let drag = null, pinch = null;
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.focus({ preventScroll: true }); canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), btn: e.button, shift: e.shiftKey, moved: 0 };
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; if (drag) drag.moved = 99; }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (tween && mode !== 'intro') return;
+  if (pinch && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    if (mode === 'orbit') { orbit.r = Math.max(4, Math.min(90, orbit.r * (pinch.d / d))); panOrbit(mx - pinch.mx, my - pinch.my); }
+    pinch.d = d; pinch.mx = mx; pinch.my = my; return;
+  }
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy));
+  const k = 0.0042;
+  if (mode === 'walk') { player.yaw += dx * k; player.pitch = Math.max(-1.25, Math.min(1.25, player.pitch + dy * k)); }
+  else if (mode === 'tour') { look.yaw += dx * k; look.pitch = Math.max(-1.3, Math.min(1.3, look.pitch + dy * k)); setPlaying(false); }
+  else if (mode === 'orbit' || mode === 'intro') { if (drag.btn === 2 || drag.shift) panOrbit(dx, dy); else { orbit.theta -= dx * 0.006; orbit.phi = Math.max(0.12, Math.min(1.5, orbit.phi - dy * 0.006)); } }
+});
+function panOrbit(dx, dy) {
+  const f = orbit.r * 0.0016, t = orbit.theta;
+  orbit.target.x = Math.max(-5, Math.min(35, orbit.target.x + (-Math.cos(t) * dx - Math.sin(t) * dy) * f));
+  orbit.target.z = Math.max(-8, Math.min(28, orbit.target.z + (Math.sin(t) * dx - Math.cos(t) * dy) * f));
+}
+function endPtr(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+  if (drag && ptrs.size === 0) { if (drag.moved < 6 && performance.now() - drag.t < 500 && mode !== 'intro') pickAt(e.clientX, e.clientY); drag = null; }
+}
+canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('wheel', (e) => { if (mode === 'orbit') { e.preventDefault(); orbit.r = Math.max(4, Math.min(90, orbit.r * (1 + Math.sign(e.deltaY) * Math.min(0.15, Math.abs(e.deltaY) * 0.0012)))); } }, { passive: false });
+window.addEventListener('keydown', (e) => {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if (mode === 'walk') { keys[e.code] = true; if (/^Arrow/.test(e.code) || e.code === 'Space') e.preventDefault(); }
+  else if (mode === 'tour' && !/BUTTON/.test(tag)) { if (e.code === 'ArrowRight') goStop(tourI + 1); if (e.code === 'ArrowLeft') goStop(tourI - 1); }
+});
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+const joyEl = $('#joy'), knob = joyEl.querySelector('.knob');
+joyEl.addEventListener('pointerdown', (e) => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); joyMove(e); e.stopPropagation(); });
+joyEl.addEventListener('pointermove', (e) => { if (e.pointerId === joy.id) joyMove(e); });
+const joyEnd = (e) => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; };
+joyEl.addEventListener('pointerup', joyEnd); joyEl.addEventListener('pointercancel', joyEnd);
+function joyMove(e) {
+  const r = joyEl.getBoundingClientRect(), R = r.width / 2;
+  let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R; const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+  joy.x = x; joy.y = y; knob.style.transform = 'translate(' + (x * R * 0.55).toFixed(1) + 'px,' + (y * R * 0.55).toFixed(1) + 'px)';
+}
+document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+document.querySelectorAll('[data-start]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.start)));
+$('#tPrev').onclick = () => goStop(tourI - 1);
+$('#tNext').onclick = () => { if (tourI === STOPS.length - 1) setMode('orbit'); else goStop(tourI + 1); };
+$('#tPlay').onclick = () => setPlaying(!playing);
+$('#infoClose').onclick = () => showInfo(null);
+$('#clearSel').onclick = () => { selectOut(null); showInfo(null); };
+const tabs = [...document.querySelectorAll('.tabs [role="tab"]')];
+tabs.forEach((t) => t.addEventListener('click', () => {
+  tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', String(on)); $('#' + x.getAttribute('aria-controls')).hidden = !on; });
+  $('#panel').classList.remove('collapsed'); app.classList.remove('pc'); $('#panelMin').textContent = '–'; $('#panelMin').setAttribute('aria-label', 'Contraer panel');
+}));
+$('#panelMin').onclick = () => {
+  const p = $('#panel');
+  if (narrow()) { p.classList.remove('open'); return; }
+  const c = p.classList.toggle('collapsed'); app.classList.toggle('pc', c);
+  $('#panelMin').textContent = c ? '+' : '–'; $('#panelMin').setAttribute('aria-label', c ? 'Expandir panel' : 'Contraer panel');
+};
+$('#panelToggle').onclick = () => $('#panel').classList.toggle('open');
+const bindLayer = (id, fn) => $(id).addEventListener('change', (e) => fn(e.target.checked));
+bindLayer('#lyCeiling', setCeiling); bindLayer('#lyCut', setCut); bindLayer('#lyXray', setXray);
+bindLayer('#lyFurn', (v) => { G.furn.visible = v; });
+bindLayer('#lyPath', (v) => { G.path.visible = v; });
+bindLayer('#lyCable', (v) => { G.cable.visible = v; });
+bindLayer('#lyFiber', (v) => { G.fiber.visible = v; });
+bindLayer('#lyLabels', (v) => { labelsOn = v; });
+bindLayer('#lyExt', (v) => { G.ext.visible = v; });
+function resize() {
+  const w = app.clientWidth, h = app.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+  if (!mm.hidden) sizeMinimap();
+}
+window.addEventListener('resize', resize);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readCss);
+new MutationObserver(readCss).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// ---------- Bucle ----------
+let last = performance.now(), frame = 0;
+const tmpT = V3();
+function loop(now) {
+  requestAnimationFrame(loop);
+  const raw = Math.max(0, (now - last) / 1000), dt = Math.min(0.05, raw); last = now; frame++;
+  if (tween) {
+    tween.t += Math.min(raw, 0.25); const k = ease(Math.min(1, tween.t / tween.dur));
+    camera.position.lerpVectors(tween.fp, tween.tp, k); tmpT.lerpVectors(tween.ft, tween.tt, k); camera.lookAt(tmpT);
+    if (k >= 1) { const t = tween; tween = null; if (t.done) t.done(); }
+  } else if (mode === 'walk') updateWalk(dt);
+  else if (mode === 'orbit' || mode === 'intro') { if (mode === 'intro' && !reduceMotion) orbit.theta += dt * 0.05; applyOrbit(); }
+  else if (mode === 'tour') {
+    camera.rotation.set(look.pitch, look.yaw, 0);
+    if (playing) { playT += dt; if (playT > 11) { if (tourI < STOPS.length - 1) goStop(tourI + 1); else setPlaying(false); } }
+  }
+  updatePulses(dt); updateRouteLOD();
+  renderer.render(scene, camera);
+  updateLabels(frame);
+  if (mode === 'walk') drawMinimap();
+}
+function init() {
+  buildMaterials(); processOutlets();
+  buildExterior(); buildShell(); buildWalls(); buildStaticFurniture(); buildRack(); buildPathways();
+  placeOutlets(); buildCables();
+  occTray = (83 * Math.PI * 3.1 * 3.1) / (200 * 50) * 100;
+  occCanal = (40 * Math.PI * 3.1 * 3.1) / (100 * 50) * 100;
+  conduitLen = 5.3;
+  buildLabels(); makePulses(); buildStops(); buildPanel();
+  readCss(); refreshOcc();
+  applyView({ ceiling: false, cut: true });
+  resize(); applyOrbit();
+  window.__pyme = { setMode, goStop, selectOut, goToOut, camera, player, orbit, OUT, stats };
+  requestAnimationFrame(loop);
+}
+const fontsReady = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve();
+fontsReady.then(() => { try { init(); } catch (err) { console.error(err); fail('No se pudo construir el modelo 3D: ' + err.message); } });
+})();
+</script>
+
+</body>
+</html>
