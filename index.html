@@ -278,7 +278,7 @@ td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
   </div>
   <div id="joy" class="joy card" hidden aria-hidden="true"><div class="knob"></div></div>
 
-  <div id="intro" class="intro">
+  <div id="intro" class="intro" hidden>
     <div class="card">
       <p class="eyebrow">Recorrido 3D · red de datos de una PyME</p>
       <h2>Cableado estructurado del edificio comercial</h2>
@@ -303,7 +303,7 @@ const app = $('#app'), canvas = $('#scene'), labelRoot = $('#labels');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches;
 const narrow = () => matchMedia('(max-width: 760px)').matches;
-function fail(msg) { $('#introText').textContent = msg; document.querySelectorAll('[data-start]').forEach((b) => (b.hidden = true)); }
+function fail(msg) { $('#intro').hidden = false; $('#introText').textContent = msg; document.querySelectorAll('[data-start]').forEach((b) => (b.hidden = true)); }
 if (!window.THREE) { fail('No se pudo cargar el motor 3D. Revisa tu conexión a internet y recarga la página.'); return; }
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
@@ -1454,6 +1454,7 @@ function init() {
   applyView({ ceiling: false, cut: true });
   resize(); applyOrbit();
   window.__pyme = { setMode, goStop, selectOut, goToOut, camera, player, orbit, OUT, stats };
+  setMode('tour'); if (tween) tween.t = tween.dur;
   requestAnimationFrame(loop);
 }
 const fontsReady = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve();
