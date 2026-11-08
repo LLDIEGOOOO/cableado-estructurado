@@ -148,7 +148,7 @@ td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
 .intro small{display:block;margin-top:14px;color:var(--muted);font-size:12px}
 .panel-toggle{display:none}
 @media (max-width:760px){
-  .tl{width:calc(100% - 32px - 84px)}
+  .tl{width:calc(100% - 32px)}
   .brand{padding:9px 12px}
   .brand .eyebrow,.brand .meta{display:none}
   .brand h1{font-size:21px;margin:0}
@@ -173,12 +173,12 @@ td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
 </head>
 <body>
 
-<div id="app">
+<div id="app" class="pc">
   <canvas id="scene" tabindex="0" aria-label="Modelo 3D del edificio comercial de la PyME con su cableado estructurado"></canvas>
   <div id="labels" aria-hidden="true"></div>
 
   <div class="tl">
-    <header class="brand card">
+    <header class="brand card" hidden>
       <p class="eyebrow">Cableado estructurado · PyME</p>
       <h1>Edificio comercial</h1>
       <p class="meta"><span>1 planta</span><span>30 × 20 m</span><span>40 salidas dobles</span><span>UTP Cat 6</span></p>
@@ -198,8 +198,8 @@ td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
     </section>
   </div>
 
-  <button type="button" id="panelToggle" class="panel-toggle btn">Panel</button>
-  <aside id="panel" class="panel card" aria-label="Panel del proyecto">
+  <button type="button" id="panelToggle" class="panel-toggle btn" hidden>Panel</button>
+  <aside id="panel" class="panel card" aria-label="Panel del proyecto" hidden>
     <div class="tabs" role="tablist">
       <button type="button" role="tab" id="tab-nodos" aria-controls="pane-nodos" aria-selected="true">Salidas</button>
       <button type="button" role="tab" id="tab-capas" aria-controls="pane-capas" aria-selected="false">Capas</button>
