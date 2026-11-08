@@ -443,7 +443,7 @@ function processOutlets() {
     o.vlan = o.area === 'OPE' ? 10 : o.area === 'ADM' ? 20 : o.area === 'AP' ? 40 : 30;
     if (o.area === 'AP') {
       const j = i - 40; o.cab = [80 + j];
-      o.pp = [{ panel: 'C', port: j + 1 }]; o.sw = [{ name: 'SW-PoE', port: j + 1 }];
+      o.pp = [{ panel: 'B', port: 33 + j }]; o.sw = [{ name: 'SW-02', port: 33 + j }];
       const ga = o.feed === 'APW' ? 'A1' : o.feed; kGroup[ga] = kGroup[ga] || 0; o.k = [kGroup[ga]++];
     } else {
       o.cab = [2 * i, 2 * i + 1];
@@ -507,13 +507,12 @@ function buildMaterials() {
     rack: { t: 'Rack 19" de 42U', s: 'Cuarto de telecomunicaciones / servidores', rows: [['Medida', '800 × 1000 mm, 2.0 m de alto'], ['Libre', '4 m al frente, 5 m atrás'], ['Organizadores', 'Verticales en ambos lados']] },
     shelf: { t: 'Bandeja para rack', s: 'U42', rows: [['Soporta', 'ONT/módem del proveedor']] },
     ont: { t: 'ONT del proveedor', s: 'Sobre la bandeja, U42', rows: [['Entrada', 'Fibra óptica del ISP'], ['Salida', 'Ethernet al firewall (WAN)']] },
-    rtr: { t: 'Firewall / router · FW-01', s: 'Rack U41', rows: [['WAN', 'ONT del proveedor'], ['LAN', 'Troncales a SW-01, SW-02 y SW-PoE'], ['Función', 'NAT, DHCP, ruteo entre VLAN y seguridad']] },
-    sw1: { t: 'Switch Gigabit 48 puertos · SW-01', s: 'Rack U36', rows: [['Conecta', 'Patch panel A (48 puertos)'], ['Áreas', 'Operativa PC1 a PC24'], ['Troncal', 'SFP al firewall']] },
-    sw2: { t: 'Switch Gigabit 48 puertos · SW-02', s: 'Rack U35', rows: [['Conecta', 'Patch panel B (32 de 48 usados)'], ['Áreas', 'Operativa PC25–30, administración, recepción y sala'], ['Troncal', 'SFP al firewall']] },
-    poe: { t: 'Switch PoE · SW-PoE', s: 'Rack U31', rows: [['Puertos', '8 × Gigabit PoE+'], ['Alimenta', 'AP-1, AP-2 y AP-3 por el mismo cable']] },
+    rtr: { t: 'Firewall / router · FW-01', s: 'Rack U41', rows: [['WAN', 'ONT del proveedor'], ['LAN', 'Troncales a SW-01 y SW-02'], ['Función', 'NAT, DHCP, ruteo entre VLAN y seguridad']] },
+    sw1: { t: 'Switch Gigabit 48 puertos · SW-01', s: 'Rack U36', rows: [['Puertos', '48 × Gigabit PoE+ y 4 SFP'], ['Conecta', 'Patch panel A (48 puertos)'], ['Áreas', 'Operativa PC1 a PC24'], ['Troncal', 'Patch cord al firewall']] },
+    sw2: { t: 'Switch Gigabit 48 puertos · SW-02', s: 'Rack U35', rows: [['Puertos', '48 × Gigabit PoE+ y 4 SFP'], ['Conecta', 'Patch panel B (35 de 48 usados)'], ['Áreas', 'Operativa PC25–30, administración, recepción, sala y los 3 AP (PoE+)'], ['Troncal', 'Patch cord al firewall']] },
     ppa: { t: 'Patch panel A · 48 puertos Cat 6', s: 'Rack U38–39', rows: [['Usados', '48 de 48'], ['Salidas', 'Operativa PC1 a PC24 (2 jacks cada una)']] },
-    ppb: { t: 'Patch panel B · 48 puertos Cat 6', s: 'Rack U32–33', rows: [['Usados', '32 de 48'], ['Salidas', 'Operativa PC25–30, administración, recepción y sala']] },
-    ppc: { t: 'Patch panel C · 48 puertos Cat 6', s: 'Rack U28–29', rows: [['Usados', '3 de 48 (access points)'], ['Libres', '45 puertos: holgura para crecer']] },
+    ppb: { t: 'Patch panel B · 48 puertos Cat 6', s: 'Rack U32–33', rows: [['Usados', '35 de 48'], ['Salidas', 'Operativa PC25–30, administración, recepción, sala y AP-1 a AP-3']] },
+    ppc: { t: 'Patch panel C · 48 puertos Cat 6', s: 'Rack U28–29', rows: [['Usados', '0 de 48 (reserva)'], ['Libres', '48 puertos para crecimiento']] },
     org: { t: 'Organizador horizontal 1U', s: 'Rack', rows: [['Función', 'Ordena los patch cords entre panel y switch']] },
     ups: { t: 'UPS 1500 VA', s: 'Rack U1–2', rows: [['Respaldo', 'Switches, firewall y ONT']] },
     pdu: { t: 'PDU / regleta para rack', s: 'Rack U4', rows: [['Contactos', '8 × NEMA 5-15']] },
@@ -708,11 +707,10 @@ function buildRack() {
   }, INFO.org);
   [40, 37, 34, 30].forEach(org);
   rackDevice(38, 2, 0.12, drawPP48('PP-A', 48), INFO.ppa);
-  rackDevice(36, 1, 0.3, drawSW('SW-01', '48×GbE', 48, 48), INFO.sw1, 0x2a2e35);
-  rackDevice(35, 1, 0.3, drawSW('SW-02', '48×GbE', 32, 48), INFO.sw2, 0x2a2e35);
-  rackDevice(32, 2, 0.12, drawPP48('PP-B', 32), INFO.ppb);
-  rackDevice(31, 1, 0.25, drawSW('SW-PoE', '8×PoE+', 3, 8), INFO.poe, 0x2a2e35);
-  rackDevice(28, 2, 0.12, drawPP48('PP-C', 3), INFO.ppc);
+  rackDevice(36, 1, 0.3, drawSW('SW-01', '48×GbE PoE+', 48, 48), INFO.sw1, 0x2a2e35);
+  rackDevice(35, 1, 0.3, drawSW('SW-02', '48×GbE PoE+', 35, 48), INFO.sw2, 0x2a2e35);
+  rackDevice(32, 2, 0.12, drawPP48('PP-B', 35), INFO.ppb);
+  rackDevice(28, 2, 0.12, drawPP48('PP-C', 0), INFO.ppc);
   rackDevice(4, 1, 0.06, (g2, w, h) => {
     g2.fillStyle = '#16181b'; g2.fillRect(0, 0, w, h); ears(g2, w, h);
     g2.fillStyle = '#e8ecf1'; g2.font = '600 28px ' + FONT_D; g2.textBaseline = 'middle'; g2.fillText('PDU', 46, h / 2 + 2);
@@ -866,7 +864,7 @@ function placeOutlets() {
 function outletInfo(o) {
   return () => {
     const L = o.len ? o.len.map(fmt).join(' / ') + ' m (máx. 90)' : '';
-    if (o.area === 'AP') return { t: o.id + ' · Access point', s: o.room + ' · sobre mesa junto al muro', rows: [['Equipo', 'Access Point Wi-Fi 6 de mesa'], ['Salida', 'Caja de superficie con 1 jack ' + o.tags[0]], ['Jack', 'PP-C ' + o.pp[0].port + ' → SW-PoE puerto ' + o.sw[0].port + ' (PoE)'], ['Canalización', 'Charola + canaleta de muro hasta la mesa'], ['VLAN', '40 · Wi-Fi'], ['Enlace', L]], node: o.id };
+    if (o.area === 'AP') return { t: o.id + ' · Access point', s: o.room + ' · sobre mesa junto al muro', rows: [['Equipo', 'Access Point Wi-Fi 6 de mesa'], ['Salida', 'Caja de superficie con 1 jack ' + o.tags[0]], ['Jack', 'PP-B ' + o.pp[0].port + ' → SW-02 Gi1/0/' + o.sw[0].port + ' (PoE+)'], ['Canalización', 'Charola + canaleta de muro hasta la mesa'], ['VLAN', '40 · Wi-Fi'], ['Enlace', L]], node: o.id };
     return {
       t: o.id + ' · ' + o.name, s: AREA[o.area] + ' · salida doble',
       rows: [['Equipo', 'Computadora ' + o.name + ' de ' + AREA[o.area].toLowerCase()], ['Faceplate', 'Doble · ' + o.tags.join(' + ')], ['Jack 1 (datos)', 'PP-' + o.pp[0].panel + ' ' + o.pp[0].port + ' → ' + o.sw[0].name + ' Gi1/0/' + o.sw[0].port], ['Jack 2 (voz/reserva)', 'PP-' + o.pp[1].panel + ' ' + o.pp[1].port + ' → ' + o.sw[1].name + ' Gi1/0/' + o.sw[1].port], ['VLAN', o.vlan + ' · ' + VLAN[o.vlan].name], ['Enlace', L]],
@@ -940,8 +938,7 @@ function buildCables() {
   const mkUp = (a, b) => curvePts([a, V3(FRONT - 0.03, a.y, a.z), V3(FRONT - 0.07, a.y, zc + 0.33), V3(FRONT - 0.07, b.y, zc + 0.33), V3(FRONT - 0.03, b.y, b.z), b], 22);
   upl.A = mkUp(V3(FRONT, Yd.sw1, sfpZ), V3(FRONT, Yd.rtr, portZ(0.70)));
   upl.B = mkUp(V3(FRONT, Yd.sw2, sfpZ), V3(FRONT, Yd.rtr, portZ(0.74)));
-  upl.C = mkUp(V3(FRONT, Yd.poe, portZ(PPU(8))), V3(FRONT, Yd.rtr, portZ(0.78)));
-  for (const k of ['A', 'B', 'C']) tube(upl[k], 0.004, COL.uplink, G.cable);
+  for (const k of ['A', 'B']) tube(upl[k], 0.004, COL.uplink, G.cable);
   ontRtr = curvePts([V3(RK.front + 0.02, Yd.ont, zc + 0.02), V3(FRONT - 0.03, Yd.ont - 0.01, zc + 0.02), V3(FRONT - 0.03, Yd.rtr + 0.012, wanZ), V3(FRONT, Yd.rtr, wanZ)], 12);
   tube(ontRtr, 0.0035, COL.wan, G.cable);
   const a = V3(24.3, 6.62, -3.24), b = V3(24.3, 2.86, -0.2), drop = [];
@@ -954,7 +951,7 @@ function buildCables() {
   tube([V3(25.6, 2.25, 0.18), V3(25.6, 2.5, 0.18), V3(25.6, 2.5, 4.5), V3(24.95, 2.5, 4.5), V3(24.95, 2.03, 4.5)], 0.006, COL.ground, G.rack, INFO.tmgb);
 }
 function fullRoute(o) {
-  if (o.area === 'AP') return fiberPts.concat(ontRtr, upl.C.slice().reverse(), rackCords[o.id + 0].slice().reverse(), o.pts[0], o.cord);
+  if (o.area === 'AP') return fiberPts.concat(ontRtr, upl.B.slice().reverse(), rackCords[o.id + 0].slice().reverse(), o.pts[0], o.cord);
   const up = o.pp[0].panel === 'A' ? upl.A : upl.B;
   return fiberPts.concat(ontRtr, up.slice().reverse(), rackCords[o.id + 0].slice().reverse(), o.pts[0], o.cord);
 }
@@ -988,7 +985,7 @@ function buildLabels() {
   addLabel('Canaleta de piso', V3(11.0, 0.12, ROWZ(2) - 0.39), 'eq', { max: 5 });
   addLabel('Minisplit', V3(29.7, 2.72, 6.8), 'eq', { max: 6 });
   addLabel('Tierra TMGB', V3(25.6, 2.38, 0.2), 'eq', { max: 5 });
-  const rk = [['ONT del ISP · bandeja', Yd.ont], ['Firewall / router', Yd.rtr], ['Patch panel A', Yd.ppa], ['Switch 01', Yd.sw1], ['Switch 02', Yd.sw2], ['Patch panel B', Yd.ppb], ['Switch PoE', Yd.poe], ['Patch panel C', Yd.ppc], ['PDU', uC(4)], ['UPS', uC(1, 2)]];
+  const rk = [['ONT del ISP · bandeja', Yd.ont], ['Firewall / router', Yd.rtr], ['Patch panel A', Yd.ppa], ['Switch 01', Yd.sw1], ['Switch 02', Yd.sw2], ['Patch panel B', Yd.ppb], ['Patch panel C', Yd.ppc], ['PDU', uC(4)], ['UPS', uC(1, 2)]];
   for (const [t, y] of rk) addLabel(t, V3(RK.front - 0.08, y, RK.zc - 0.46), 'rk', { max: 3.4, anchor: 'right' });
   for (const o of OUT) o.label = addLabel(o.area === 'AP' ? o.id : o.id + ' · ' + o.tags.join('/'), o.fp.clone().add(V3(0, o.area === 'AP' ? 0.3 : 0.1, 0)), 'node', { max: o.area === 'AP' ? 8 : 3.2, node: o });
 }
@@ -1140,7 +1137,7 @@ function buildStops() {
     { t: 'Entrada y recepción', d: 'La entrada principal está en el muro oeste. En recepción hay 2 computadoras con salida doble. Sus cables llegan por la canaleta del muro norte y una canaleta de piso hasta cada escritorio. El AP-1 va sobre una mesa junto al muro de la sala y da Wi-Fi a toda el Área 1.', p: P([8.7, 1.85, 0.9]), g: P([3.6, 0.55, 3.0]), v: { ceiling: true } },
     { t: 'Charola principal', d: 'La charola de 200 × 50 mm corre a 2.70 m de altura los 30 m del edificio, de muro oeste a muro este, y pasa sobre el rack. Lleva 83 cables con ' + fmt(occTray) + ' % de ocupación, así que la holgura es de ' + fmt(100 - occTray) + ' %, arriba del 40 % que pide el problema.', p: P([18.8, 1.75, 5.25]), g: P([8, 2.5, CZ]), v: { ceiling: true } },
     { t: 'Telecomunicaciones / Servidores', d: 'El rack de 19" queda de frente a la puerta, con 4 m libres al frente. El cuarto tiene minisplit, puesta a tierra (TIA-607) y no tiene ventanas. Todos los cables suben del rack a la charola.', p: P([20.7, 1.7, 5.7]), g: P([24.0, 1.2, RK.zc]), v: { ceiling: true } },
-    { t: 'Rack de 19"', d: 'De arriba hacia abajo: bandeja con la ONT del proveedor, firewall/router, organizador, patch panel A, switch 01, switch 02, organizador, patch panel B, switch PoE, organizador, patch panel C, PDU y UPS. Cada patch cord lleva el color de la VLAN de su área.', p: P([23.05, 1.42, RK.zc - 0.12]), g: P([24.06, 1.5, RK.zc + 0.02]), v: { ceiling: true } },
+    { t: 'Rack de 19"', d: 'De arriba hacia abajo: bandeja con la ONT del proveedor, firewall/router, organizador, patch panel A, switch 01, switch 02, organizador, patch panel B, organizador, patch panel C de reserva, PDU y UPS. Los dos switches son PoE+ y alimentan a los access points. Cada patch cord lleva el color de la VLAN de su área.', p: P([23.05, 1.42, RK.zc - 0.12]), g: P([24.06, 1.5, RK.zc + 0.02]), v: { ceiling: true } },
     { t: 'Bajadas al área operativa', d: 'Los cables salen de la charola, bajan por canaleta de 100 × 50 mm y corren al pie del muro. Junto a la puerta, la canaleta sube y pasa por encima del marco para no estorbar el paso. Aquí la canaleta se ve transparente.', p: P([12.4, 1.55, 7.2]), g: P([10.1, 1.2, 4.7]), v: { ceiling: true, xray: true } },
     { t: 'Área operativa', d: '30 computadoras en 10 filas de 3. La PC 1 y la PC 2 de cada fila salen de la canaleta del muro oeste; la PC 3, del muro este. De la canaleta del muro a cada escritorio va canaleta de piso. El AP-2 va sobre una mesa junto al muro este.', p: P([19.4, 2.6, 19.0]), g: P([13.8, 0.4, 9.5]), v: { ceiling: true } },
     { t: 'Salida doble · ' + o.id, d: 'La canaleta de piso llega a la pata trasera del escritorio, sube y termina en una caja con faceplate doble: jack ' + o.tags[0] + ' para datos y ' + o.tags[1] + ' para voz o reserva. Enlace: ' + fmt(Math.max.apply(null, o.len)) + ' m de 90 m permitidos.', p: vp, g: vt, v: { ceiling: true, xray: true } },
@@ -1293,8 +1290,8 @@ function buildPanel() {
     ['Inalámbrico', [
       R('Access points', '3', '3'),
       R('Cables Cat 6 adicionales (AP)', '3', '3', 'Incluidos en el total de cable'),
-      R('Puertos adicionales en patch panel', '3', '3', 'PP-C 1 a 3'),
-      R('Switch PoE', '1', '1', '8 puertos PoE+'),
+      R('Puertos adicionales en patch panel', '3', '3', 'PP-B 33 a 35'),
+      R('Switch PoE', '1', 'Integrado', 'SW-01 y SW-02 ya son PoE+', true),
       R('Soporte para montaje de AP', '1', '3 mesas', 'Cada AP va sobre una mesa junto al muro', true),
     ]],
   ];
